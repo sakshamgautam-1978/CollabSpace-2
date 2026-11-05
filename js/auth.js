@@ -1,302 +1,260 @@
 
-document.addEventListener("DOMContentLoaded", function () {
+/* =========================================
+   NEXORA - AUTHENTICATION SYSTEM
+   Login | Signup | Session Management
+========================================= */
 
-    // =====================================
-    // 1. STORAGE CONFIGURATION
-    // =====================================
+const AUTH_KEYS = {
+    users: "collabUsers",
+    currentUser: "collabCurrentUser"
+};
 
-    const USERS_KEY = "collabUsers";
-    const CURRENT_USER_KEY = "collabCurrentUser";
+// Read data from Local Storage
+function getAuthData(key, fallback = []) {
+    try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : fallback;
+    } catch (error) {
+        console.error("Nexora storage error:", error);
+        return fallback;
+    }
+}
 
-    function getUsers() {
-        try {
-            return JSON.parse(localStorage.getItem(USERS_KEY)) || [];
-        } catch (error) {
-            return [];
+// Save data to Local Storage
+function saveAuthData(key, data) {
+    localStorage.setItem(key, JSON.stringify(data));
+}
+
+// Generate unique user ID
+function generateUserId() {
+    return "user_" + Date.now() + "_" +
+        Math.random().toString(36).substring(2, 9);
+}
+
+// Display authentication messages
+function showAuthMessage(elementId, message, type = "error") {
+    const element = document.getElementById(elementId);
+
+    if (!element) return;
+
+    element.textContent = message;
+    element.style.color = type === "success" ? "#35d49a" : "#ff6b81";
+    element.style.display = "block";
+}
+
+// Get current logged-in user
+function getCurrentAuthUser() {
+    return getAuthData(AUTH_KEYS.currentUser, null);
+}
+
+// =========================================
+// SIGNUP
+// =========================================
+
+const signupForm = document.getElementById("signupForm");
+
+if (signupForm) {
+    signupForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        const name = document.getElementById("signupName")?.value.trim();
+        const email = document.getElementById("signupEmail")?.value.trim().toLowerCase();
+        const password = document.getElementById("signupPassword")?.value;
+
+        if (!name || !email || !password) {
+            showAuthMessage("signupMessage", "Please fill in all fields.");
+            return;
         }
-    }
 
-    function saveUsers(users) {
-        localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    }
-
-    function getCurrentUser() {
-        try {
-            return JSON.parse(localStorage.getItem(CURRENT_USER_KEY));
-        } catch (error) {
-            return null;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            showAuthMessage("signupMessage", "Please enter a valid email address.");
+            return;
         }
-    }
 
-    function setCurrentUser(user) {
-        localStorage.setItem(
-            CURRENT_USER_KEY,
-            JSON.stringify(user)
-        );
-    }
+        if (password.length < 6) {
+            showAuthMessage("signupMessage", "Password must contain at least 6 characters.");
+            return;
+        }
 
-    // =====================================
-    // 2. HELPER FUNCTIONS
-    // =====================================
+        const users = getAuthData(AUTH_KEYS.users, []);
 
-    function showMessage(element, message, type = "error") {
-        if (!element) return;
+        const existingUser = users.find(user => user.email === email);
 
-        element.textContent = message;
-        element.style.color =
-            type === "success" ? "#31c48d" : "#f06475";
-    }
+        if (existingUser) {
+            showAuthMessage(
+                "signupMessage",
+                "An account with this email already exists."
+            );
+            return;
+        }
 
-    function createUserId() {
-        return "user_" + Date.now() + "_" +
-            Math.random().toString(36).slice(2, 8);
-    }
+        const newUser = {
+            id: generateUserId(),
+            name: name,
+            email: email,
+            password: password,
+            createdAt: new Date().toISOString()
+        };
 
-    function initialiseUserData(user) {
+        users.push(newUser);
+        saveAuthData(AUTH_KEYS.users, users);
 
+        // Create the user's initial profile
         const profile = {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            headline: "Creator on CollabSpace",
+            name: name,
+            headline: "Creative Professional",
             location: "",
-            about: "",
+            about: "Welcome to my Nexora profile!",
             skills: [],
             portfolio: "",
             availability: "Available"
         };
 
         localStorage.setItem(
-            "collabProfile_" + user.id,
+            "collabProfile_" + newUser.id,
             JSON.stringify(profile)
         );
 
-        return profile;
-    }
+        // Automatically log in after signup
+        const sessionUser = {
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email
+        };
 
-    // =====================================
-    // 3. LOGIN / SIGNUP ELEMENTS
-    // =====================================
+        saveAuthData(AUTH_KEYS.currentUser, sessionUser);
 
-    const loginForm = document.getElementById("loginForm");
-    const signupForm = document.getElementById("signupForm");
-
-    const showLogin = document.getElementById("showLogin");
-    const showSignup = document.getElementById("showSignup");
-
-    // =====================================
-    // 4. SWITCH AUTHENTICATION FORMS
-    // =====================================
-
-    function displayLogin() {
-
-        if (!loginForm || !signupForm) return;
-
-        loginForm.hidden = false;
-        signupForm.hidden = true;
-
-        showLogin?.classList.add("active");
-        showSignup?.classList.remove("active");
-    }
-
-    function displaySignup() {
-
-        if (!loginForm || !signupForm) return;
-
-        loginForm.hidden = true;
-        signupForm.hidden = false;
-
-        showSignup?.classList.add("active");
-        showLogin?.classList.remove("active");
-    }
-
-    showLogin?.addEventListener("click", displayLogin);
-    showSignup?.addEventListener("click", displaySignup);
-
-    // =====================================
-    // 5. AUTOMATIC SESSION REDIRECT
-    // =====================================
-
-    const currentPage = document.body.dataset.page;
-
-    if (currentPage === "auth" && getCurrentUser()) {
-        window.location.replace("dashboard.html");
-        return;
-    }
-
-    // =====================================
-    // 6. SIGNUP FUNCTIONALITY
-    // =====================================
-
-    if (signupForm) {
-
-        signupForm.addEventListener("submit", function (event) {
-
-            event.preventDefault();
-
-            const name =
-                document.getElementById("signupName").value.trim();
-
-            const email =
-                document.getElementById("signupEmail").value.trim().toLowerCase();
-
-            const password =
-                document.getElementById("signupPassword").value;
-
-            const message =
-                document.getElementById("signupMessage");
-
-            if (name.length < 2) {
-                showMessage(message, "Please enter a valid name.");
-                return;
-            }
-
-            if (password.length < 6) {
-                showMessage(message, "Password must contain at least 6 characters.");
-                return;
-            }
-
-            const users = getUsers();
-
-            const existingUser = users.find(
-                user => user.email === email
-            );
-
-            if (existingUser) {
-                showMessage(
-                    message,
-                    "An account with this email already exists."
-                );
-                return;
-            }
-
-            const newUser = {
-                id: createUserId(),
-                name: name,
-                email: email,
-                password: password,
-                createdAt: new Date().toISOString()
-            };
-
-            users.push(newUser);
-            saveUsers(users);
-
-            const sessionUser = {
-                id: newUser.id,
-                name: newUser.name,
-                email: newUser.email
-            };
-
-            setCurrentUser(sessionUser);
-            initialiseUserData(sessionUser);
-
-            showMessage(
-                message,
-                "Account created successfully! Redirecting...",
-                "success"
-            );
-
-            setTimeout(function () {
-                window.location.href = "dashboard.html";
-            }, 700);
-
-        });
-    }
-
-    // =====================================
-    // 7. LOGIN FUNCTIONALITY
-    // =====================================
-
-    if (loginForm) {
-
-        loginForm.addEventListener("submit", function (event) {
-
-            event.preventDefault();
-
-            const email =
-                document.getElementById("loginEmail").value.trim().toLowerCase();
-
-            const password =
-                document.getElementById("loginPassword").value;
-
-            const message =
-                document.getElementById("loginMessage");
-
-            const users = getUsers();
-
-            const matchedUser = users.find(function (user) {
-                return user.email === email &&
-                    user.password === password;
-            });
-
-            if (!matchedUser) {
-                showMessage(
-                    message,
-                    "Incorrect email or password. Please try again."
-                );
-                return;
-            }
-
-            const sessionUser = {
-                id: matchedUser.id,
-                name: matchedUser.name,
-                email: matchedUser.email
-            };
-
-            setCurrentUser(sessionUser);
-
-            showMessage(
-                message,
-                "Login successful! Redirecting...",
-                "success"
-            );
-
-            setTimeout(function () {
-                window.location.href = "dashboard.html";
-            }, 500);
-
-        });
-    }
-
-    // =====================================
-    // 8. LOGOUT FUNCTIONALITY
-    // =====================================
-
-    document.addEventListener("click", function (event) {
-
-        const logoutButton = event.target.closest("#logoutButton");
-
-        if (!logoutButton) return;
-
-        const confirmLogout = window.confirm(
-            "Are you sure you want to log out?"
+        showAuthMessage(
+            "signupMessage",
+            "Welcome to Nexora! Your account has been created.",
+            "success"
         );
 
-        if (confirmLogout) {
-
-            localStorage.removeItem(CURRENT_USER_KEY);
-
-            window.location.replace("index.html");
-        }
-
+        setTimeout(() => {
+            window.location.href = "dashboard.html";
+        }, 800);
     });
+}
 
-    // =====================================
-    // 9. AUTHENTICATION PROTECTION
-    // =====================================
+// =========================================
+// LOGIN
+// =========================================
 
-    const publicPages = ["auth"];
+const loginForm = document.getElementById("loginForm");
 
-    if (!publicPages.includes(currentPage)) {
+if (loginForm) {
+    loginForm.addEventListener("submit", function (event) {
+        event.preventDefault();
 
-        const currentUser = getCurrentUser();
+        const email = document.getElementById("loginEmail")?.value.trim().toLowerCase();
+        const password = document.getElementById("loginPassword")?.value;
 
-        if (!currentUser) {
-            window.location.replace("index.html");
+        if (!email || !password) {
+            showAuthMessage("loginMessage", "Please enter your email and password.");
             return;
         }
+
+        const users = getAuthData(AUTH_KEYS.users, []);
+
+        const user = users.find(
+            item => item.email === email && item.password === password
+        );
+
+        if (!user) {
+            showAuthMessage(
+                "loginMessage",
+                "Invalid email or password. Please try again."
+            );
+            return;
+        }
+
+        const sessionUser = {
+            id: user.id,
+            name: user.name,
+            email: user.email
+        };
+
+        saveAuthData(AUTH_KEYS.currentUser, sessionUser);
+
+        showAuthMessage(
+            "loginMessage",
+            "Login successful! Welcome to Nexora.",
+            "success"
+        );
+
+        setTimeout(() => {
+            window.location.href = "dashboard.html";
+        }, 500);
+    });
+}
+
+// =========================================
+// LOGIN / SIGNUP FORM SWITCHING
+// =========================================
+
+const showLogin = document.getElementById("showLogin");
+const showSignup = document.getElementById("showSignup");
+
+if (showLogin) {
+    showLogin.addEventListener("click", function (event) {
+        event.preventDefault();
+
+        document.getElementById("loginForm")?.classList.remove("hidden");
+        document.getElementById("signupForm")?.classList.add("hidden");
+
+        document.getElementById("loginMessage").textContent = "";
+        document.getElementById("signupMessage").textContent = "";
+    });
+}
+
+if (showSignup) {
+    showSignup.addEventListener("click", function (event) {
+        event.preventDefault();
+
+        document.getElementById("signupForm")?.classList.remove("hidden");
+        document.getElementById("loginForm")?.classList.add("hidden");
+
+        document.getElementById("loginMessage").textContent = "";
+        document.getElementById("signupMessage").textContent = "";
+    });
+}
+
+// =========================================
+// PAGE ACCESS PROTECTION
+// =========================================
+
+const currentPage = document.body.dataset.page;
+
+const publicPages = ["login", "signup", "index"];
+
+const currentSession = getCurrentAuthUser();
+
+if (currentPage && !publicPages.includes(currentPage)) {
+    if (!currentSession || !currentSession.id) {
+        window.location.href = "index.html";
     }
+}
 
-    console.log("CollabSpace authentication loaded.");
+// Redirect logged-in users away from login page
+if (
+    currentPage === "login" ||
+    currentPage === "signup" ||
+    currentPage === "index"
+) {
+    if (currentSession && currentSession.id) {
+        window.location.href = "dashboard.html";
+    }
+}
 
-});
+// =========================================
+// NEXORA LOGOUT
+// =========================================
+
+function logoutNexora() {
+    localStorage.removeItem(AUTH_KEYS.currentUser);
+    window.location.href = "index.html";
+}
+
+window.logoutNexora = logoutNexora;
+
+console.log("Nexora authentication system initialized.");
