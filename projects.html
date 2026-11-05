@@ -1,0 +1,51 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore Projects | CollabSpace</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="projects">
+    <div id="app-shell">
+        <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <main class="main-content">
+            <header class="topbar" id="topbar"></header>
+            <section class="page-content">
+                <div class="page-heading">
+                    <div>
+                        <p class="eyebrow">FIND YOUR NEXT OPPORTUNITY</p>
+                        <h1>Explore Projects</h1>
+                        <p>Discover projects and collaborate with creators.</p>
+                    </div>
+                    <a href="post-project.html" class="btn btn-primary">+ Post Project</a>
+                </div>
+
+                <section class="panel">
+                    <div class="search-filter-row">
+                        <input type="search" id="projectSearch" placeholder="Search projects...">
+                        <select id="projectCategoryFilter">
+                            <option value="">All Categories</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Design">Design</option>
+                            <option value="Content">Content</option>
+                            <option value="Business">Business</option>
+                            <option value="Education">Education</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </section>
+
+                <div id="projectGrid" class="project-grid">
+                    <p class="empty-state">Projects will appear here.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="js/navigation.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

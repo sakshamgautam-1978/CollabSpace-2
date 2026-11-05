@@ -1,0 +1,72 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | CollabSpace</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="settings">
+    <div id="app-shell">
+        <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <main class="main-content">
+            <header class="topbar" id="topbar"></header>
+            <section class="page-content">
+                <div class="page-heading">
+                    <div>
+                        <p class="eyebrow">CONTROL YOUR EXPERIENCE</p>
+                        <h1>Settings</h1>
+                        <p>Manage your account and preferences.</p>
+                    </div>
+                </div>
+
+                <section class="panel">
+                    <h2>Account Preferences</h2>
+                    <div class="setting-row">
+                        <div>
+                            <h3>Dark Theme</h3>
+                            <p>Use the dark appearance across CollabSpace.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="darkThemeToggle" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <h3>Email Notifications</h3>
+                            <p>Prototype preference for account updates.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="emailNotificationsToggle" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div>
+                            <h3>Message Notifications</h3>
+                            <p>Show updates about new messages.</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="messageNotificationsToggle" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="saveSettings">Save Preferences</button>
+                </section>
+
+                <section class="panel danger-panel">
+                    <h2>Account Actions</h2>
+                    <p>Sign out of your current CollabSpace account.</p>
+                    <button type="button" class="btn btn-danger" id="logoutButton">Log Out</button>
+                </section>
+            </section>
+        </main>
+    </div>
+    <script src="js/navigation.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

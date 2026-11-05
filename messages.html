@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages | CollabSpace</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="messages">
+    <div id="app-shell">
+        <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <main class="main-content">
+            <header class="topbar" id="topbar"></header>
+            <section class="page-content">
+                <div class="page-heading">
+                    <div>
+                        <p class="eyebrow">STAY CONNECTED</p>
+                        <h1>Messages</h1>
+                        <p>Communicate with your collaborators.</p>
+                    </div>
+                </div>
+
+                <section class="panel messages-panel">
+                    <div class="conversation-list">
+                        <div class="panel-header">
+                            <h2>Conversations</h2>
+                        </div>
+                        <input type="search" id="conversationSearch" placeholder="Search conversations...">
+                        <div id="conversationList">
+                            <p class="empty-state">Your conversations will appear here.</p>
+                        </div>
+                    </div>
+
+                    <div class="chat-area">
+                        <div id="chatHeader" class="chat-header">
+                            <h2>Select a conversation</h2>
+                        </div>
+                        <div id="chatMessages" class="chat-messages">
+                            <p class="empty-state">Choose a conversation to view messages.</p>
+                        </div>
+                        <form id="messageForm" class="message-form">
+                            <input type="text" id="messageInput" placeholder="Write a message..." autocomplete="off" disabled>
+                            <button type="submit" class="btn btn-primary" disabled id="sendMessageButton">Send</button>
+                        </form>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+    <script src="js/navigation.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

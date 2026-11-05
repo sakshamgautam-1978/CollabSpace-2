@@ -1,0 +1,55 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moderation | CollabSpace</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="moderation">
+    <div id="app-shell">
+        <aside class="sidebar" id="sidebar"></aside>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <main class="main-content">
+            <header class="topbar" id="topbar"></header>
+            <section class="page-content">
+                <div class="page-heading">
+                    <div>
+                        <p class="eyebrow">COMMUNITY SAFETY</p>
+                        <h1>Moderation Centre</h1>
+                        <p>Review reports and maintain a respectful community.</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <article class="stat-card">
+                        <p>Total Reports</p>
+                        <h2 id="totalReports">0</h2>
+                    </article>
+                    <article class="stat-card">
+                        <p>Pending Reports</p>
+                        <h2 id="pendingReports">0</h2>
+                    </article>
+                    <article class="stat-card">
+                        <p>Resolved Reports</p>
+                        <h2 id="resolvedReports">0</h2>
+                    </article>
+                </div>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Community Reports</h2>
+                    </div>
+                    <div id="moderationReports">
+                        <p class="empty-state">No reports to review.</p>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+    <script src="js/navigation.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>
