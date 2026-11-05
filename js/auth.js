@@ -279,3 +279,16 @@ function logoutNexora() {
 window.logoutNexora = logoutNexora;
 
 console.log("Nexora authentication initialized successfully.");
+
+// =========================================
+// NEXORA LOGOUT BUTTON FIX
+// =========================================
+
+document.addEventListener("click", function (event) {
+    const logoutButton = event.target.closest("#logoutButton");
+
+    if (logoutButton) {
+        event.preventDefault();
+        logoutNexora();
+    }
+});
