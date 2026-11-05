@@ -2,7 +2,7 @@
 document.addEventListener("DOMContentLoaded", function () {
 
     // ==========================================
-    // 1. COLLABSPACE DATA SYSTEM
+    // 1. STORAGE AND APPLICATION SETUP
     // ==========================================
 
     const KEYS = {
@@ -31,12 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
         localStorage.setItem(key, JSON.stringify(value));
     }
 
-    function currentUser() {
-        return read(KEYS.currentUser, null);
-    }
-
-    const user = currentUser();
-
+    const user = read(KEYS.currentUser, null);
     if (!user) return;
 
     const userId = user.id;
@@ -47,38 +42,40 @@ document.addEventListener("DOMContentLoaded", function () {
     // ==========================================
 
     function escapeHTML(value) {
-        return String(value ?? "").replace(/[&<>"']/g, character => ({
+        return String(value ?? "").replace(/[&<>"']/g, char => ({
             "&": "&amp;",
             "<": "&lt;",
             ">": "&gt;",
             '"': "&quot;",
             "'": "&#39;"
-        })[character]);
+        })[char]);
     }
 
     function makeId(prefix = "item") {
         return prefix + "_" + Date.now() + "_" +
-            Math.random().toString(36).slice(2, 7);
+            Math.random().toString(36).slice(2, 8);
     }
 
     function getProfile(id) {
         const profile = read("collabProfile_" + id, null);
-
         if (profile) return profile;
 
-        const account = read(KEYS.users, []).find(item => item.id === id);
+        const account = read(KEYS.users, [])
+            .find(item => item.id === id);
 
-        return account ? {
+        if (!account) return null;
+
+        return {
             id: account.id,
             name: account.name,
             email: account.email,
-            headline: "CollabSpace Creator",
+            headline: "Nexora Creator",
             location: "",
             about: "",
             skills: [],
             portfolio: "",
             availability: "Available"
-        } : null;
+        };
     }
 
     function saveProfile(profile) {
@@ -96,7 +93,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function formatDate(date) {
         if (!date) return "No date";
-        return new Date(date).toLocaleDateString();
+
+        const parsed = new Date(date);
+        return Number.isNaN(parsed.getTime())
+            ? "No date"
+            : parsed.toLocaleDateString("en-IN");
     }
 
     function showToast(message) {
@@ -107,8 +108,46 @@ document.addEventListener("DOMContentLoaded", function () {
         toast.textContent = message;
 
         document.body.appendChild(toast);
-
         setTimeout(() => toast.remove(), 3000);
+    }
+
+    function setText(id, value) {
+        const element = document.getElementById(id);
+        if (element) element.textContent = value;
+    }
+
+    function setValue(id, value) {
+        const element = document.getElementById(id);
+        if (element) element.value = value || "";
+    }
+
+    function setChecked(id, value) {
+        const element = document.getElementById(id);
+        if (element) element.checked = value;
+    }
+
+    function getUserName(id) {
+        return getProfile(id)?.name || "Unknown Creator";
+    }
+
+    function getUserProjects() {
+        return read(KEYS.projects, []).filter(project =>
+            String(project.ownerId || project.creatorId) === String(userId)
+        );
+    }
+
+    function getUserRequests() {
+        return read(KEYS.requests, []).filter(request =>
+            request.senderId === userId ||
+            request.receiverId === userId
+        );
+    }
+
+    function getUserMessages() {
+        return read(KEYS.messages, []).filter(message =>
+            message.senderId === userId ||
+            message.receiverId === userId
+        );
     }
 
     function addActivity(message, icon = "✦") {
@@ -140,38 +179,11 @@ document.addEventListener("DOMContentLoaded", function () {
         write(KEYS.notifications, notifications);
     }
 
-    function getUserName(id) {
-        const profile = getProfile(id);
-        return profile ? profile.name : "Unknown Creator";
-    }
-
-    function getUserProjects() {
-        return read(KEYS.projects, []).filter(project =>
-            project.ownerId === userId
-        );
-    }
-
-    function getUserRequests() {
-        return read(KEYS.requests, []).filter(request =>
-            request.senderId === userId ||
-            request.receiverId === userId
-        );
-    }
-
-    function getUserMessages() {
-        return read(KEYS.messages, []).filter(message =>
-            message.senderId === userId ||
-            message.receiverId === userId
-        );
-    }
-
     // ==========================================
     // 3. DEMO CREATOR PROFILES
     // ==========================================
 
     function seedDemoCreators() {
-        if (localStorage.getItem("collabDemoCreatorsSeeded")) return;
-
         const demos = [
             {
                 id: "demo_1",
@@ -258,24 +270,106 @@ document.addEventListener("DOMContentLoaded", function () {
             "demo_4", "demo_5", "demo_6"
         ].map(getProfile).filter(Boolean);
 
-        const all = [...realProfiles, ...demoProfiles];
-
-        return all.filter(profile => profile.id !== userId);
+        return [...realProfiles, ...demoProfiles]
+            .filter(profile => profile.id !== userId);
     }
 
     // ==========================================
-    // 4. SKILL MATCHING ALGORITHM
+    // 4. DEMO PROJECTS
+    // ==========================================
+
+    function seedNexoraDemoProjects() {
+        const seedKey = "nexoraDemoProjectsSeeded";
+        if (localStorage.getItem(seedKey)) return;
+
+        const projects = read(KEYS.projects, []);
+
+        const demos = [
+            {
+                id: "nexora_demo_project_1",
+                ownerId: "demo_1",
+                title: "AI-Powered Student Productivity Platform",
+                description: "Build a platform that helps students manage tasks, track study habits and generate smart study schedules.",
+                category: "Web Development",
+                teamSize: 4,
+                skills: ["HTML", "CSS", "JavaScript", "Python"],
+                deadline: "2026-12-20",
+                status: "open"
+            },
+            {
+                id: "nexora_demo_project_2",
+                ownerId: "demo_2",
+                title: "Redesign a Modern E-Learning Dashboard",
+                description: "Design a clean and responsive dashboard for an online learning platform with an intuitive user experience.",
+                category: "UI/UX Design",
+                teamSize: 3,
+                skills: ["UI/UX Design", "Figma", "Graphic Design"],
+                deadline: "2026-12-15",
+                status: "open"
+            },
+            {
+                id: "nexora_demo_project_3",
+                ownerId: "demo_3",
+                title: "Campus Placement Data Analyzer",
+                description: "Develop a data analysis tool that studies placement trends, salary patterns and student performance.",
+                category: "Data Science",
+                teamSize: 3,
+                skills: ["Python", "Data Science", "Machine Learning"],
+                deadline: "2026-12-25",
+                status: "open"
+            },
+            {
+                id: "nexora_demo_project_4",
+                ownerId: "demo_4",
+                title: "Digital Storytelling and Content Campaign",
+                description: "Create a digital content campaign with engaging stories, short-form videos and a consistent brand identity.",
+                category: "Content Creation",
+                teamSize: 4,
+                skills: ["Content Writing", "Marketing", "Video Editing"],
+                deadline: "2026-12-18",
+                status: "open"
+            },
+            {
+                id: "nexora_demo_project_5",
+                ownerId: "demo_5",
+                title: "Community Collaboration Web App",
+                description: "Build a responsive web application where people can discover communities, share ideas and collaborate.",
+                category: "Web Development",
+                teamSize: 4,
+                skills: ["HTML", "CSS", "JavaScript", "React"],
+                deadline: "2026-12-30",
+                status: "open"
+            }
+        ];
+
+        const existingIds = new Set(projects.map(project => project.id));
+
+        const newProjects = demos
+            .filter(project => !existingIds.has(project.id))
+            .map(project => ({
+                ...project,
+                createdAt: new Date().toISOString()
+            }));
+
+        write(KEYS.projects, [...projects, ...newProjects]);
+        localStorage.setItem(seedKey, "true");
+    }
+
+    seedNexoraDemoProjects();
+
+    // ==========================================
+    // 5. SKILL MATCHING
     // ==========================================
 
     function calculateSkillMatch(requiredSkills, creatorSkills) {
-        if (!requiredSkills.length || !creatorSkills.length) return 0;
+        if (!requiredSkills?.length || !creatorSkills?.length) return 0;
 
         const required = requiredSkills.map(skill =>
-            skill.trim().toLowerCase()
+            String(skill).trim().toLowerCase()
         );
 
         const available = creatorSkills.map(skill =>
-            skill.trim().toLowerCase()
+            String(skill).trim().toLowerCase()
         );
 
         const matched = required.filter(skill =>
@@ -289,14 +383,17 @@ document.addEventListener("DOMContentLoaded", function () {
         return getAllCreators()
             .map(creator => ({
                 creator,
-                score: calculateSkillMatch(skills, creator.skills || [])
+                score: calculateSkillMatch(
+                    skills,
+                    creator.skills || []
+                )
             }))
             .filter(item => item.score > 0)
             .sort((a, b) => b.score - a.score);
     }
 
     // ==========================================
-    // 5. DASHBOARD
+    // 6. DASHBOARD
     // ==========================================
 
     function renderDashboard() {
@@ -307,24 +404,24 @@ document.addEventListener("DOMContentLoaded", function () {
         const notifications = read(KEYS.notifications, [])
             .filter(item => item.userId === userId && !item.read);
 
-        const accepted = requests.filter(item =>
-            item.status === "accepted"
+        setText("totalProjects", projects.length);
+
+        setText(
+            "totalCollaborations",
+            requests.filter(item => item.status === "accepted").length
         );
 
-        setText("totalProjects", projects.length);
-        setText("totalCollaborations", accepted.length);
         setText("totalMessages", messages.length);
         setText("totalNotifications", notifications.length);
 
-        const activityContainer = document.getElementById("recentActivity");
-
-        if (!activityContainer) return;
+        const container = document.getElementById("recentActivity");
+        if (!container) return;
 
         const activities = read(KEYS.activity, [])
             .filter(item => item.userId === userId)
             .slice(0, 6);
 
-        activityContainer.innerHTML = activities.length
+        container.innerHTML = activities.length
             ? activities.map(item => `
                 <div class="activity-item">
                     <div class="activity-icon">${escapeHTML(item.icon)}</div>
@@ -337,13 +434,8 @@ document.addEventListener("DOMContentLoaded", function () {
             : `<p class="empty-state">Your recent activity will appear here.</p>`;
     }
 
-    function setText(id, value) {
-        const element = document.getElementById(id);
-        if (element) element.textContent = value;
-    }
-
     // ==========================================
-    // 6. CREATOR DISCOVERY
+    // 7. CREATOR DISCOVERY
     // ==========================================
 
     function renderCreators() {
@@ -352,54 +444,138 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const search = (
             document.getElementById("creatorSearch")?.value || ""
-        ).toLowerCase();
+        ).toLowerCase().trim();
 
-        const skill = (
+        const skillFilter = (
             document.getElementById("creatorSkillFilter")?.value || ""
         ).toLowerCase();
 
-        const creators = getAllCreators().filter(creator => {
-            const searchable =
-                `${creator.name} ${creator.headline} ${creator.about} ${(creator.skills || []).join(" ")}`
-                    .toLowerCase();
+        const mySkills = getProfile(userId)?.skills || [];
+        const requests = read(KEYS.requests, []);
 
-            const matchesSearch = searchable.includes(search);
+        const creators = getAllCreators()
+            .filter(creator => {
+                const searchable = `
+                    ${creator.name}
+                    ${creator.headline}
+                    ${creator.location}
+                    ${creator.about}
+                    ${(creator.skills || []).join(" ")}
+                `.toLowerCase();
 
-            const matchesSkill = !skill ||
-                (creator.skills || []).some(item =>
-                    item.toLowerCase() === skill
-                );
+                const matchesSearch = searchable.includes(search);
 
-            return matchesSearch && matchesSkill;
-        });
+                const matchesSkill = !skillFilter ||
+                    (creator.skills || []).some(item =>
+                        item.toLowerCase() === skillFilter
+                    );
+
+                return matchesSearch && matchesSkill;
+            })
+            .map(creator => ({
+                ...creator,
+                matchScore: calculateSkillMatch(
+                    mySkills,
+                    creator.skills || []
+                )
+            }))
+            .sort((a, b) => b.matchScore - a.matchScore);
 
         if (!creators.length) {
-            grid.innerHTML = `<p class="empty-state">No creators found. Try another search.</p>`;
+            grid.innerHTML = `
+                <p class="empty-state">
+                    No creators found. Try another search.
+                </p>`;
             return;
         }
 
         grid.innerHTML = creators.map(creator => {
-            const match = calculateSkillMatch(
-                getProfile(userId)?.skills || [],
-                creator.skills || []
+            const connection = requests.find(request =>
+                request.type === "connection" &&
+                request.senderId === userId &&
+                request.receiverId === creator.id &&
+                request.status !== "rejected"
             );
 
+            const isConnected = connection?.status === "accepted";
+            const isPending = connection?.status === "pending";
+
+            const available =
+                (creator.availability || "").toLowerCase() === "available";
+
             return `
-                <article class="creator-card">
-                    <div class="creator-avatar">${escapeHTML(initials(creator.name))}</div>
-                    <h3>${escapeHTML(creator.name)}</h3>
-                    <p>${escapeHTML(creator.headline)}</p>
-                    <p>📍 ${escapeHTML(creator.location || "Location not added")}</p>
-                    <div class="tag-list">
-                        ${(creator.skills || []).map(skill =>
-                            `<span class="tag">${escapeHTML(skill)}</span>`
-                        ).join("")}
+                <article class="creator-card nexora-creator-card">
+
+                    <div class="creator-card-top">
+                        <div class="creator-avatar nexora-creator-avatar">
+                            ${escapeHTML(initials(creator.name))}
+                        </div>
+
+                        <span class="status ${available
+                            ? "status-open"
+                            : "status-pending"}">
+                            ${escapeHTML(creator.availability || "Unknown")}
+                        </span>
                     </div>
-                    <p><strong>${match}%</strong> skill match with your profile</p>
-                    <p><span class="status ${creator.availability === "Available" ? "status-open" : "status-pending"}">${escapeHTML(creator.availability || "Unknown")}</span></p>
+
+                    <h3>${escapeHTML(creator.name)}</h3>
+
+                    <p class="creator-headline">
+                        ${escapeHTML(creator.headline || "Creator")}
+                    </p>
+
+                    <p class="creator-location">
+                        📍 ${escapeHTML(creator.location || "Location not added")}
+                    </p>
+
+                    <p class="creator-about">
+                        ${escapeHTML(
+                            creator.about || "No introduction added yet."
+                        )}
+                    </p>
+
+                    <div class="creator-skills-section">
+                        <small>SKILLS</small>
+                        <div class="tag-list">
+                            ${(creator.skills || []).map(item =>
+                                `<span class="tag">${escapeHTML(item)}</span>`
+                            ).join("")}
+                        </div>
+                    </div>
+
+                    <div class="creator-match-box">
+                        <div class="creator-match-heading">
+                            <span>Skill compatibility</span>
+                            <strong>${creator.matchScore}%</strong>
+                        </div>
+
+                        <div class="project-match-track">
+                            <div class="project-match-fill"
+                                style="width:${creator.matchScore}%"></div>
+                        </div>
+                    </div>
+
                     <div class="card-actions">
-                        <button class="btn btn-primary" data-action="connect" data-id="${escapeHTML(creator.id)}">Connect</button>
-                        <button class="btn btn-secondary" data-action="view-creator" data-id="${escapeHTML(creator.id)}">View Profile</button>
+                        <button
+                            class="btn btn-primary"
+                            data-action="connect"
+                            data-id="${escapeHTML(creator.id)}"
+                            ${isPending || isConnected ? "disabled" : ""}
+                        >
+                            ${isConnected
+                                ? "Connected ✓"
+                                : isPending
+                                    ? "Request Pending"
+                                    : "Connect"}
+                        </button>
+
+                        <button
+                            class="btn btn-secondary"
+                            data-action="view-creator"
+                            data-id="${escapeHTML(creator.id)}"
+                        >
+                            View Profile
+                        </button>
                     </div>
                 </article>
             `;
@@ -413,129 +589,188 @@ document.addEventListener("DOMContentLoaded", function () {
         ?.addEventListener("change", renderCreators);
 
     // ==========================================
-    // 7. PROJECT MARKETPLACE
+    // 8. PROJECT MARKETPLACE
     // ==========================================
 
-    
-function renderProjects() {
-    const grid = document.getElementById("projectGrid");
-    if (!grid) return;
+    function renderProjects() {
+        const grid = document.getElementById("projectGrid");
+        if (!grid) return;
 
-    const search = (
-        document.getElementById("projectSearch")?.value || ""
-    ).toLowerCase();
+        const search = (
+            document.getElementById("projectSearch")?.value || ""
+        ).toLowerCase().trim();
 
-    const category = (
-        document.getElementById("projectCategoryFilter")?.value || ""
-    ).toLowerCase();
+        const category = (
+            document.getElementById("projectCategoryFilter")?.value || ""
+        ).toLowerCase();
 
-    const projects = read(KEYS.projects, []).filter(project => {
-        const skills = Array.isArray(project.skills)
-            ? project.skills
-            : project.skill
-                ? [project.skill]
-                : [];
+        const allProjects = read(KEYS.projects, []);
 
-        const searchable = `
-            ${project.title || ""}
-            ${project.description || ""}
-            ${skills.join(" ")}
-            ${project.category || ""}
-        `.toLowerCase();
+        const projects = allProjects.filter(project => {
+            const skills = Array.isArray(project.skills)
+                ? project.skills
+                : project.skill ? [project.skill] : [];
 
-        return searchable.includes(search) &&
-            (!category ||
-                (project.category || "").toLowerCase() === category) &&
-            project.status !== "closed";
-    });
+            const ownerId = project.ownerId || project.creatorId;
 
-    if (!projects.length) {
-        grid.innerHTML = `
-            <p class="empty-state">
-                No projects found. Be the first to post one!
-            </p>`;
-        return;
+            const searchable = `
+                ${project.title || ""}
+                ${project.description || ""}
+                ${skills.join(" ")}
+                ${project.category || ""}
+                ${getUserName(ownerId)}
+            `.toLowerCase();
+
+            return searchable.includes(search) &&
+                (!category ||
+                    (project.category || "").toLowerCase() === category) &&
+                project.status !== "closed";
+        });
+
+        if (!projects.length) {
+            grid.innerHTML = `
+                <p class="empty-state">
+                    No projects found. Try another search!
+                </p>`;
+            return;
+        }
+
+        const mySkills = getProfile(userId)?.skills || [];
+
+        grid.innerHTML = projects.map(project => {
+            const ownerId = project.ownerId || project.creatorId;
+
+            const skills = Array.isArray(project.skills)
+                ? project.skills
+                : project.skill ? [project.skill] : [];
+
+            const isOwner = String(ownerId) === String(userId);
+
+            const alreadyRequested = read(KEYS.requests, []).some(request =>
+                request.projectId === project.id &&
+                request.senderId === userId &&
+                request.status !== "rejected"
+            );
+
+            const matchScore = calculateSkillMatch(mySkills, skills);
+            const ownerName = project.creatorName || getUserName(ownerId);
+
+            const deadlineText = project.deadline
+                ? formatDate(project.deadline + "T00:00:00")
+                : "Flexible";
+
+            const postedText = project.createdAt
+                ? formatDate(project.createdAt)
+                : "Recently";
+
+            return `
+                <article class="project-card nexora-project-card">
+
+                    <div class="project-card-top">
+                        <span class="project-category-badge">
+                            ${escapeHTML(project.category || "Other")}
+                        </span>
+
+                        <span class="status status-open">
+                            ${escapeHTML(project.status || "open")}
+                        </span>
+                    </div>
+
+                    <h3>${escapeHTML(project.title || "Untitled Project")}</h3>
+
+                    <p class="project-description">
+                        ${escapeHTML(project.description || "")}
+                    </p>
+
+                    <div class="project-owner">
+                        <div class="project-owner-avatar">
+                            ${escapeHTML(initials(ownerName))}
+                        </div>
+                        <div>
+                            <strong>${escapeHTML(ownerName)}</strong>
+                            <small>Project creator</small>
+                        </div>
+                    </div>
+
+                    <div class="project-skills-section">
+                        <small>REQUIRED SKILLS</small>
+                        <div class="tag-list">
+                            ${skills.map(skill =>
+                                `<span class="tag">${escapeHTML(skill)}</span>`
+                            ).join("")}
+                        </div>
+                    </div>
+
+                    <div class="project-info-grid">
+                        <div>
+                            <small>TEAM SIZE</small>
+                            <strong>👥 ${Number(project.teamSize) || 1} members</strong>
+                        </div>
+
+                        <div>
+                            <small>DEADLINE</small>
+                            <strong>📅 ${escapeHTML(deadlineText)}</strong>
+                        </div>
+
+                        <div>
+                            <small>POSTED</small>
+                            <strong>${escapeHTML(postedText)}</strong>
+                        </div>
+                    </div>
+
+                    ${matchScore > 0 ? `
+                        <div class="project-match">
+                            <div class="project-match-heading">
+                                <small>Your skill match</small>
+                                <strong>${matchScore}%</strong>
+                            </div>
+
+                            <div class="project-match-track">
+                                <div class="project-match-fill"
+                                    style="width:${matchScore}%"></div>
+                            </div>
+                        </div>
+                    ` : ""}
+
+                    <div class="card-actions">
+                        ${isOwner
+                            ? `<span class="status status-pending">Your Project</span>`
+                            : `<button
+                                class="btn btn-primary"
+                                data-action="join-project"
+                                data-id="${escapeHTML(project.id)}"
+                                ${alreadyRequested ? "disabled" : ""}
+                            >
+                                ${alreadyRequested
+                                    ? "Request Sent"
+                                    : "Request to Join"}
+                            </button>`
+                        }
+                    </div>
+                </article>
+            `;
+        }).join("");
     }
 
-    grid.innerHTML = projects.map(project => {
-        const ownerId = project.ownerId || project.creatorId;
-        const skills = Array.isArray(project.skills)
-            ? project.skills
-            : project.skill
-                ? [project.skill]
-                : [];
+    document.getElementById("projectSearch")
+        ?.addEventListener("input", renderProjects);
 
-        const alreadyRequested = read(KEYS.requests, []).some(request =>
-            request.projectId === project.id &&
-            request.senderId === userId
-        );
-
-        const isOwner = String(ownerId) === String(userId);
-
-        return `
-            <article class="project-card">
-                <span class="status status-open">
-                    ${escapeHTML(project.status || "open")}
-                </span>
-
-                <h3>${escapeHTML(project.title || "Untitled Project")}</h3>
-
-                <p>${escapeHTML(project.description || "")}</p>
-
-                <p>👤 Posted by
-                    ${escapeHTML(
-                        project.creatorName || getUserName(ownerId)
-                    )}
-                </p>
-
-                <p>📂 ${escapeHTML(project.category || "Other")}</p>
-
-                <p>👥 Team size:
-                    ${Number(project.teamSize) || 1}
-                </p>
-
-                <div class="tag-list">
-                    ${skills.map(skill =>
-                        `<span class="tag">${escapeHTML(skill)}</span>`
-                    ).join("")}
-                </div>
-
-                <div class="card-actions">
-                    ${!isOwner
-                        ? `<button
-                            class="btn btn-primary"
-                            data-action="join-project"
-                            data-id="${escapeHTML(project.id)}"
-                            ${alreadyRequested ? "disabled" : ""}
-                        >
-                            ${alreadyRequested
-                                ? "Request Sent"
-                                : "Request to Join"}
-                        </button>`
-                        : `<span class="status status-pending">
-                            Your Project
-                        </span>`
-                    }
-                </div>
-            </article>
-        `;
-    }).join("");
-}
-
+    document.getElementById("projectCategoryFilter")
+        ?.addEventListener("change", renderProjects);
 
     // ==========================================
-    // 8. POST PROJECT
+    // 9. POST PROJECT
     // ==========================================
 
     document.getElementById("postProjectForm")
         ?.addEventListener("submit", function (event) {
-
             event.preventDefault();
 
             const title = document.getElementById("projectTitle").value.trim();
             const description = document.getElementById("projectDescription").value.trim();
             const category = document.getElementById("projectCategory").value;
             const teamSize = Number(document.getElementById("projectTeamSize").value);
+
             const skills = document.getElementById("projectSkills").value
                 .split(",")
                 .map(item => item.trim())
@@ -569,7 +804,7 @@ function renderProjects() {
             });
 
             write(KEYS.projects, projects);
-            addActivity(`You published the project "${title}".`, "📁");
+            addActivity(`You published "${title}".`, "📁");
 
             showToast("Project published successfully!");
 
@@ -579,7 +814,7 @@ function renderProjects() {
         });
 
     // ==========================================
-    // 9. MY PROJECTS
+    // 10. MY PROJECTS
     // ==========================================
 
     function renderMyProjects() {
@@ -590,7 +825,10 @@ function renderProjects() {
         const requests = read(KEYS.requests, []);
 
         setText("myProjectCount", projects.length);
-        setText("openProjectCount", projects.filter(p => p.status === "open").length);
+        setText(
+            "openProjectCount",
+            projects.filter(p => p.status === "open").length
+        );
 
         const projectIds = projects.map(p => p.id);
 
@@ -602,28 +840,52 @@ function renderProjects() {
         setText("projectRequestCount", requestCount);
 
         if (!projects.length) {
-            container.innerHTML = `<p class="empty-state">You haven't posted any projects yet.</p>`;
+            container.innerHTML = `
+                <p class="empty-state">
+                    You haven't posted any projects yet.
+                </p>`;
             return;
         }
 
-        container.innerHTML = projects.map(project => `
-            <article class="project-card">
-                <span class="status ${project.status === "open" ? "status-open" : "status-closed"}">${escapeHTML(project.status)}</span>
-                <h3>${escapeHTML(project.title)}</h3>
-                <p>${escapeHTML(project.description)}</p>
-                <p>Category: ${escapeHTML(project.category)}</p>
-                <p>Required skills: ${project.skills.map(escapeHTML).join(", ")}</p>
-                <p>Deadline: ${escapeHTML(project.deadline || "Not specified")}</p>
-                <div class="card-actions">
-                    <button class="btn btn-secondary" data-action="toggle-project" data-id="${escapeHTML(project.id)}">${project.status === "open" ? "Close Project" : "Reopen Project"}</button>
-                    <button class="btn btn-danger" data-action="delete-project" data-id="${escapeHTML(project.id)}">Delete</button>
-                </div>
-            </article>
-        `).join("");
+        container.innerHTML = projects.map(project => {
+            const skills = Array.isArray(project.skills)
+                ? project.skills
+                : project.skill ? [project.skill] : [];
+
+            return `
+                <article class="project-card">
+                    <span class="status ${project.status === "open"
+                        ? "status-open" : "status-closed"}">
+                        ${escapeHTML(project.status || "open")}
+                    </span>
+
+                    <h3>${escapeHTML(project.title)}</h3>
+                    <p>${escapeHTML(project.description)}</p>
+                    <p>Category: ${escapeHTML(project.category)}</p>
+                    <p>Required skills: ${skills.map(escapeHTML).join(", ")}</p>
+                    <p>Deadline: ${escapeHTML(project.deadline || "Not specified")}</p>
+
+                    <div class="card-actions">
+                        <button class="btn btn-secondary"
+                            data-action="toggle-project"
+                            data-id="${escapeHTML(project.id)}">
+                            ${project.status === "open"
+                                ? "Close Project" : "Reopen Project"}
+                        </button>
+
+                        <button class="btn btn-danger"
+                            data-action="delete-project"
+                            data-id="${escapeHTML(project.id)}">
+                            Delete
+                        </button>
+                    </div>
+                </article>
+            `;
+        }).join("");
     }
 
     // ==========================================
-    // 10. COLLABORATION REQUESTS
+    // 11. COLLABORATION REQUESTS
     // ==========================================
 
     function renderCollaborations() {
@@ -637,7 +899,8 @@ function renderProjects() {
         const projects = read(KEYS.projects, []);
 
         const incomingRequests = requests.filter(request =>
-            request.receiverId === userId && request.status === "pending"
+            request.receiverId === userId &&
+            request.status === "pending"
         );
 
         const sentRequests = requests.filter(request =>
@@ -645,23 +908,43 @@ function renderProjects() {
         );
 
         const activeRequests = requests.filter(request =>
-            (request.senderId === userId || request.receiverId === userId) &&
+            (request.senderId === userId ||
+                request.receiverId === userId) &&
             request.status === "accepted"
         );
 
         incoming.innerHTML = incomingRequests.length
             ? incomingRequests.map(request => {
-                const project = projects.find(p => p.id === request.projectId);
+                const project = projects.find(p =>
+                    p.id === request.projectId
+                );
+
+                const isProject = request.type === "project";
 
                 return `
                     <div class="request-item">
                         <div>
-                            <p><strong>${escapeHTML(getUserName(request.senderId))}</strong> wants to join <strong>${escapeHTML(project?.title || "your project")}</strong>.</p>
+                            <p>
+                                <strong>${escapeHTML(getUserName(request.senderId))}</strong>
+                                ${isProject
+                                    ? `wants to join <strong>${escapeHTML(project?.title || "your project")}</strong>.`
+                                    : "sent you a connection request."}
+                            </p>
                             <small>${formatDate(request.date)}</small>
                         </div>
+
                         <div class="request-actions">
-                            <button class="btn btn-primary" data-action="accept-request" data-id="${escapeHTML(request.id)}">Accept</button>
-                            <button class="btn btn-danger" data-action="reject-request" data-id="${escapeHTML(request.id)}">Reject</button>
+                            <button class="btn btn-primary"
+                                data-action="accept-request"
+                                data-id="${escapeHTML(request.id)}">
+                                Accept
+                            </button>
+
+                            <button class="btn btn-danger"
+                                data-action="reject-request"
+                                data-id="${escapeHTML(request.id)}">
+                                Reject
+                            </button>
                         </div>
                     </div>
                 `;
@@ -670,47 +953,67 @@ function renderProjects() {
 
         sent.innerHTML = sentRequests.length
             ? sentRequests.map(request => {
-                const project = projects.find(p => p.id === request.projectId);
+                const project = projects.find(p =>
+                    p.id === request.projectId
+                );
 
                 return `
                     <div class="request-item">
                         <div>
-                            <p>Request to join <strong>${escapeHTML(project?.title || "a project")}</strong></p>
-                            <small>Status: ${escapeHTML(request.status)}</small>
+                            <p>
+                                ${request.type === "project"
+                                    ? `Request to join <strong>${escapeHTML(project?.title || "a project")}</strong>`
+                                    : `Connection request to <strong>${escapeHTML(getUserName(request.receiverId))}</strong>`}
+                            </p>
+                            <small>${formatDate(request.date)}</small>
                         </div>
-                        <span class="status status-pending">${escapeHTML(request.status)}</span>
+                        <span class="status status-pending">
+                            ${escapeHTML(request.status)}
+                        </span>
                     </div>
                 `;
             }).join("")
             : `<p class="empty-state">You haven't sent any requests.</p>`;
 
         active.innerHTML = activeRequests.length
-            ? activeRequests.map(request => `
-                <div class="request-item">
-                    <div>
-                        <p>Collaboration with <strong>${escapeHTML(getUserName(request.senderId === userId ? request.receiverId : request.senderId))}</strong></p>
-                        <small>Accepted collaboration</small>
+            ? activeRequests.map(request => {
+                const otherId = request.senderId === userId
+                    ? request.receiverId
+                    : request.senderId;
+
+                return `
+                    <div class="request-item">
+                        <div>
+                            <p>
+                                Collaboration with
+                                <strong>${escapeHTML(getUserName(otherId))}</strong>
+                            </p>
+                            <small>Accepted collaboration</small>
+                        </div>
+                        <a href="messages.html" class="btn btn-secondary">
+                            Message
+                        </a>
                     </div>
-                    <a href="messages.html" class="btn btn-secondary">Message</a>
-                </div>
-            `).join("")
+                `;
+            }).join("")
             : `<p class="empty-state">No active collaborations yet.</p>`;
     }
 
     // ==========================================
-    // 11. MESSAGING SYSTEM
+    // 12. MESSAGING SYSTEM
     // ==========================================
 
     let selectedConversation = null;
 
     function getConversations() {
-        const messages = getUserMessages();
         const ids = new Set();
 
-        messages.forEach(message => {
-            ids.add(message.senderId === userId
-                ? message.receiverId
-                : message.senderId);
+        getUserMessages().forEach(message => {
+            ids.add(
+                message.senderId === userId
+                    ? message.receiverId
+                    : message.senderId
+            );
         });
 
         return [...ids];
@@ -720,67 +1023,83 @@ function renderProjects() {
         const list = document.getElementById("conversationList");
         if (!list) return;
 
-        const conversations = getConversations();
-
         const search = (
             document.getElementById("conversationSearch")?.value || ""
         ).toLowerCase();
 
-        const filtered = conversations.filter(id =>
+        const conversations = getConversations().filter(id =>
             getUserName(id).toLowerCase().includes(search)
         );
 
-        list.innerHTML = filtered.length
-            ? filtered.map(id => `
-                <div class="conversation-item ${selectedConversation === id ? "active" : ""}" data-action="open-conversation" data-id="${escapeHTML(id)}">
-                    <div class="user-avatar">${escapeHTML(initials(getUserName(id)))}</div>
+        list.innerHTML = conversations.length
+            ? conversations.map(id => `
+                <div class="conversation-item ${
+                    selectedConversation === id ? "active" : ""
+                }"
+                    data-action="open-conversation"
+                    data-id="${escapeHTML(id)}">
+
+                    <div class="user-avatar">
+                        ${escapeHTML(initials(getUserName(id)))}
+                    </div>
+
                     <div>
                         <h4>${escapeHTML(getUserName(id))}</h4>
                         <p>Open conversation</p>
                     </div>
                 </div>
             `).join("")
-            : `<p class="empty-state">No conversations yet. Connect with a creator to start chatting.</p>`;
+            : `<p class="empty-state">No conversations yet.</p>`;
 
         renderChat();
     }
 
     function renderChat() {
         const header = document.getElementById("chatHeader");
-        const messagesContainer = document.getElementById("chatMessages");
+        const container = document.getElementById("chatMessages");
         const input = document.getElementById("messageInput");
-        const sendButton = document.getElementById("sendMessageButton");
+        const button = document.getElementById("sendMessageButton");
 
-        if (!header || !messagesContainer) return;
+        if (!header || !container) return;
 
         if (!selectedConversation) {
             header.innerHTML = "<h2>Select a conversation</h2>";
-            messagesContainer.innerHTML = `<p class="empty-state">Choose a conversation to view messages.</p>`;
+            container.innerHTML = `
+                <p class="empty-state">
+                    Choose a conversation to view messages.
+                </p>`;
+
             if (input) input.disabled = true;
-            if (sendButton) sendButton.disabled = true;
+            if (button) button.disabled = true;
             return;
         }
 
-        header.innerHTML = `<h2>${escapeHTML(getUserName(selectedConversation))}</h2>`;
+        header.innerHTML = `
+            <h2>${escapeHTML(getUserName(selectedConversation))}</h2>
+        `;
 
         if (input) input.disabled = false;
-        if (sendButton) sendButton.disabled = false;
+        if (button) button.disabled = false;
 
         const messages = read(KEYS.messages, []).filter(message =>
-            (message.senderId === userId && message.receiverId === selectedConversation) ||
-            (message.senderId === selectedConversation && message.receiverId === userId)
+            (message.senderId === userId &&
+                message.receiverId === selectedConversation) ||
+            (message.senderId === selectedConversation &&
+                message.receiverId === userId)
         );
 
-        messagesContainer.innerHTML = messages.length
+        container.innerHTML = messages.length
             ? messages.map(message => `
-                <div class="message-bubble ${message.senderId === userId ? "sent" : ""}">
+                <div class="message-bubble ${
+                    message.senderId === userId ? "sent" : ""
+                }">
                     ${escapeHTML(message.text)}
                     <small>${formatDate(message.date)}</small>
                 </div>
             `).join("")
             : `<p class="empty-state">Start the conversation!</p>`;
 
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        container.scrollTop = container.scrollHeight;
     }
 
     document.getElementById("conversationSearch")
@@ -791,9 +1110,9 @@ function renderProjects() {
             event.preventDefault();
 
             const input = document.getElementById("messageInput");
-            const text = input.value.trim();
+            const messageText = input.value.trim();
 
-            if (!selectedConversation || !text) return;
+            if (!selectedConversation || !messageText) return;
 
             const messages = read(KEYS.messages, []);
 
@@ -801,7 +1120,7 @@ function renderProjects() {
                 id: makeId("message"),
                 senderId: userId,
                 receiverId: selectedConversation,
-                text,
+                text: messageText,
                 date: new Date().toISOString()
             });
 
@@ -819,7 +1138,7 @@ function renderProjects() {
         });
 
     // ==========================================
-    // 12. NOTIFICATIONS
+    // 13. NOTIFICATIONS
     // ==========================================
 
     function renderNotifications() {
@@ -835,13 +1154,20 @@ function renderProjects() {
 
         container.innerHTML = notifications.length
             ? notifications.map(item => `
-                <div class="notification-item ${item.read ? "" : "unread"}">
+                <div class="notification-item ${
+                    item.read ? "" : "unread"
+                }">
                     <div>
                         <p>${escapeHTML(item.message)}</p>
                         <small>${formatDate(item.date)}</small>
                     </div>
+
                     ${!item.read
-                        ? `<button class="btn btn-secondary" data-action="read-notification" data-id="${escapeHTML(item.id)}">Mark Read</button>`
+                        ? `<button class="btn btn-secondary"
+                            data-action="read-notification"
+                            data-id="${escapeHTML(item.id)}">
+                            Mark Read
+                           </button>`
                         : `<span class="status status-open">Read</span>`
                     }
                 </div>
@@ -863,7 +1189,7 @@ function renderProjects() {
         });
 
     // ==========================================
-    // 13. PROFILE DISPLAY
+    // 14. PROFILE DISPLAY
     // ==========================================
 
     function renderProfile() {
@@ -871,9 +1197,12 @@ function renderProjects() {
         if (!profile) return;
 
         setText("profileName", profile.name);
-        setText("profileHeadline", profile.headline || "Creator on CollabSpace");
+        setText("profileHeadline", profile.headline || "Creator on Nexora");
         setText("profileLocation", profile.location || "Location not added");
-        setText("profileAbout", profile.about || "Add an introduction to tell other creators about yourself.");
+        setText(
+            "profileAbout",
+            profile.about || "Add an introduction to tell creators about yourself."
+        );
         setText("profileAvatar", initials(profile.name));
 
         const skills = document.getElementById("profileSkills");
@@ -892,9 +1221,12 @@ function renderProjects() {
             if (profile.portfolio) {
                 try {
                     const url = new URL(profile.portfolio);
-                    if (url.protocol === "https:" || url.protocol === "http:") {
+
+                    if (["https:", "http:"].includes(url.protocol)) {
                         portfolio.href = url.href;
                         portfolio.textContent = "Visit Portfolio";
+                        portfolio.target = "_blank";
+                        portfolio.rel = "noopener noreferrer";
                     } else {
                         portfolio.removeAttribute("href");
                         portfolio.textContent = "Invalid portfolio URL";
@@ -914,7 +1246,8 @@ function renderProjects() {
         );
 
         const average = ratings.length
-            ? ratings.reduce((sum, item) => sum + item.score, 0) / ratings.length
+            ? ratings.reduce((sum, item) => sum + Number(item.score), 0) /
+                ratings.length
             : 0;
 
         setText(
@@ -926,7 +1259,7 @@ function renderProjects() {
     }
 
     // ==========================================
-    // 14. EDIT PROFILE
+    // 15. EDIT PROFILE
     // ==========================================
 
     function loadEditProfile() {
@@ -942,11 +1275,6 @@ function renderProjects() {
         setValue("editAvailability", profile.availability);
     }
 
-    function setValue(id, value) {
-        const element = document.getElementById(id);
-        if (element) element.value = value || "";
-    }
-
     document.getElementById("editProfileForm")
         ?.addEventListener("submit", function (event) {
             event.preventDefault();
@@ -958,18 +1286,26 @@ function renderProjects() {
             profile.headline = document.getElementById("editHeadline").value.trim();
             profile.location = document.getElementById("editLocation").value.trim();
             profile.about = document.getElementById("editAbout").value.trim();
+
             profile.skills = document.getElementById("editSkills").value
                 .split(",")
                 .map(skill => skill.trim())
                 .filter(Boolean);
+
             profile.portfolio = document.getElementById("editPortfolio").value.trim();
             profile.availability = document.getElementById("editAvailability").value;
+
+            if (!profile.name) {
+                showToast("Name cannot be empty.");
+                return;
+            }
 
             if (profile.portfolio) {
                 try {
                     const url = new URL(profile.portfolio);
+
                     if (!["http:", "https:"].includes(url.protocol)) {
-                        showToast("Please use a valid HTTP or HTTPS portfolio URL.");
+                        showToast("Use a valid HTTP or HTTPS portfolio URL.");
                         return;
                     }
                 } catch {
@@ -980,13 +1316,11 @@ function renderProjects() {
 
             saveProfile(profile);
 
-            const updatedUser = {
+            write(KEYS.currentUser, {
                 id: userId,
                 name: profile.name,
                 email: user.email
-            };
-
-            write(KEYS.currentUser, updatedUser);
+            });
 
             const users = read(KEYS.users, []).map(account =>
                 account.id === userId
@@ -997,7 +1331,6 @@ function renderProjects() {
             write(KEYS.users, users);
 
             addActivity("You updated your creator profile.", "◉");
-
             showToast("Profile updated successfully!");
 
             setTimeout(() => {
@@ -1006,8 +1339,15 @@ function renderProjects() {
         });
 
     // ==========================================
-    // 15. SETTINGS
+    // 16. SETTINGS
     // ==========================================
+
+    function applyTheme(settings) {
+        document.body.classList.toggle(
+            "light-theme",
+            settings.darkTheme === false
+        );
+    }
 
     function loadSettings() {
         const settings = read(KEYS.settings, {});
@@ -1015,16 +1355,20 @@ function renderProjects() {
         setChecked("darkThemeToggle", settings.darkTheme !== false);
         setChecked("emailNotificationsToggle", settings.emailNotifications !== false);
         setChecked("messageNotificationsToggle", settings.messageNotifications !== false);
+
+        applyTheme(settings);
     }
 
-    function setChecked(id, value) {
-        const element = document.getElementById(id);
-        if (element) element.checked = value;
-    }
+    document.getElementById("darkThemeToggle")
+        ?.addEventListener("change", function () {
+            const settings = read(KEYS.settings, {});
+            settings.darkTheme = this.checked;
+            write(KEYS.settings, settings);
+            applyTheme(settings);
+        });
 
     document.getElementById("saveSettings")
         ?.addEventListener("click", function () {
-
             const settings = {
                 darkTheme: document.getElementById("darkThemeToggle").checked,
                 emailNotifications: document.getElementById("emailNotificationsToggle").checked,
@@ -1032,11 +1376,12 @@ function renderProjects() {
             };
 
             write(KEYS.settings, settings);
+            applyTheme(settings);
             showToast("Preferences saved.");
         });
 
     // ==========================================
-    // 16. MODERATION AND REPORTING
+    // 17. MODERATION AND REPORTING
     // ==========================================
 
     function renderModeration() {
@@ -1046,8 +1391,14 @@ function renderProjects() {
         const reports = read(KEYS.reports, []);
 
         setText("totalReports", reports.length);
-        setText("pendingReports", reports.filter(r => r.status === "pending").length);
-        setText("resolvedReports", reports.filter(r => r.status === "resolved").length);
+        setText(
+            "pendingReports",
+            reports.filter(r => r.status === "pending").length
+        );
+        setText(
+            "resolvedReports",
+            reports.filter(r => r.status === "resolved").length
+        );
 
         container.innerHTML = reports.length
             ? reports.map(report => `
@@ -1055,12 +1406,26 @@ function renderProjects() {
                     <div>
                         <p><strong>${escapeHTML(report.reason)}</strong></p>
                         <p>${escapeHTML(report.description)}</p>
-                        <small>Reported by ${escapeHTML(getUserName(report.reporterId))} · ${formatDate(report.date)}</small>
+                        <small>
+                            Reported by ${escapeHTML(getUserName(report.reporterId))}
+                            · ${formatDate(report.date)}
+                        </small>
                     </div>
+
                     <div class="request-actions">
-                        <span class="status ${report.status === "resolved" ? "status-open" : "status-pending"}">${escapeHTML(report.status)}</span>
+                        <span class="status ${
+                            report.status === "resolved"
+                                ? "status-open" : "status-pending"
+                        }">
+                            ${escapeHTML(report.status)}
+                        </span>
+
                         ${report.status === "pending"
-                            ? `<button class="btn btn-primary" data-action="resolve-report" data-id="${escapeHTML(report.id)}">Resolve</button>`
+                            ? `<button class="btn btn-primary"
+                                data-action="resolve-report"
+                                data-id="${escapeHTML(report.id)}">
+                                Resolve
+                               </button>`
                             : ""
                         }
                     </div>
@@ -1070,7 +1435,7 @@ function renderProjects() {
     }
 
     function submitReport(targetId, reason, description) {
-        if (!targetId || !reason || !description.trim()) {
+        if (!targetId || !reason || !String(description || "").trim()) {
             showToast("Please complete the report details.");
             return;
         }
@@ -1082,7 +1447,7 @@ function renderProjects() {
             reporterId: userId,
             targetId,
             reason,
-            description: description.trim(),
+            description: String(description).trim(),
             status: "pending",
             date: new Date().toISOString()
         });
@@ -1093,7 +1458,7 @@ function renderProjects() {
     }
 
     // ==========================================
-    // 17. RATINGS AND REPUTATION
+    // 18. RATINGS AND REPUTATION
     // ==========================================
 
     function submitRating(targetId, score, review) {
@@ -1139,7 +1504,7 @@ function renderProjects() {
     }
 
     // ==========================================
-    // 18. CREATOR CONNECTIONS
+    // 19. CREATOR CONNECTIONS
     // ==========================================
 
     function sendConnectionRequest(targetId) {
@@ -1177,20 +1542,29 @@ function renderProjects() {
             "connection"
         );
 
-        addActivity(`You sent a connection request to ${getUserName(targetId)}.`, "🤝");
+        addActivity(
+            `You sent a connection request to ${getUserName(targetId)}.`,
+            "🤝"
+        );
 
         showToast("Connection request sent!");
+        renderCreators();
     }
 
     // ==========================================
-    // 19. JOIN PROJECT REQUEST
+    // 20. JOIN PROJECT REQUEST
     // ==========================================
 
     function joinProject(projectId) {
         const projects = read(KEYS.projects, []);
-        const project = projects.find(item => item.id === projectId);
 
-        if (!project || project.ownerId === userId) return;
+        const project = projects.find(item =>
+            item.id === projectId
+        );
+
+        const ownerId = project?.ownerId || project?.creatorId;
+
+        if (!project || String(ownerId) === String(userId)) return;
 
         const requests = read(KEYS.requests, []);
 
@@ -1208,7 +1582,7 @@ function renderProjects() {
         requests.unshift({
             id: makeId("request"),
             senderId: userId,
-            receiverId: project.ownerId,
+            receiverId: ownerId,
             projectId,
             type: "project",
             status: "pending",
@@ -1218,8 +1592,8 @@ function renderProjects() {
         write(KEYS.requests, requests);
 
         addNotification(
-            project.ownerId,
-            `${user.name} requested to join your project "${project.title}".`,
+            ownerId,
+            `${user.name} requested to join "${project.title}".`,
             "project-request"
         );
 
@@ -1230,14 +1604,18 @@ function renderProjects() {
     }
 
     // ==========================================
-    // 20. ACCEPT / REJECT REQUESTS
+    // 21. ACCEPT / REJECT REQUESTS
     // ==========================================
 
     function updateRequest(requestId, status) {
         const requests = read(KEYS.requests, []);
-        const request = requests.find(item => item.id === requestId);
 
-        if (!request || request.receiverId !== userId ||
+        const request = requests.find(item =>
+            item.id === requestId
+        );
+
+        if (!request ||
+            request.receiverId !== userId ||
             request.status !== "pending") return;
 
         request.status = status;
@@ -1258,34 +1636,46 @@ function renderProjects() {
         addActivity(`You ${status} a collaboration request.`, "🤝");
 
         showToast(`Request ${status}.`);
+
         renderCollaborations();
+        renderCreators();
+        renderDashboard();
     }
 
     // ==========================================
-    // 21. PROJECT MANAGEMENT
+    // 22. PROJECT MANAGEMENT
     // ==========================================
 
     function toggleProject(projectId) {
         const projects = read(KEYS.projects, []);
+
         const project = projects.find(item =>
-            item.id === projectId && item.ownerId === userId
+            item.id === projectId &&
+            String(item.ownerId || item.creatorId) === String(userId)
         );
 
         if (!project) return;
 
-        project.status = project.status === "open" ? "closed" : "open";
+        project.status = project.status === "open"
+            ? "closed"
+            : "open";
 
         write(KEYS.projects, projects);
         renderMyProjects();
+
         showToast("Project status updated.");
     }
 
     function deleteProject(projectId) {
-        if (!confirm("Are you sure you want to delete this project?")) return;
+        if (!confirm("Are you sure you want to delete this project?")) {
+            return;
+        }
 
         const projects = read(KEYS.projects, []);
+
         const project = projects.find(item =>
-            item.id === projectId && item.ownerId === userId
+            item.id === projectId &&
+            String(item.ownerId || item.creatorId) === String(userId)
         );
 
         if (!project) return;
@@ -1297,20 +1687,22 @@ function renderProjects() {
 
         write(
             KEYS.requests,
-            read(KEYS.requests, []).filter(item => item.projectId !== projectId)
+            read(KEYS.requests, []).filter(
+                item => item.projectId !== projectId
+            )
         );
 
-        addActivity(`You deleted the project "${project.title}".`, "🗑");
+        addActivity(`You deleted "${project.title}".`, "🗑");
+
         renderMyProjects();
         showToast("Project deleted.");
     }
 
     // ==========================================
-    // 22. GLOBAL BUTTON ACTION HANDLER
+    // 23. GLOBAL BUTTON ACTION HANDLER
     // ==========================================
 
     document.addEventListener("click", function (event) {
-
         const button = event.target.closest("[data-action]");
         if (!button) return;
 
@@ -1318,10 +1710,19 @@ function renderProjects() {
         const id = button.dataset.id;
 
         switch (action) {
-
+            
             case "connect":
-                sendConnectionRequest(id);
-                break;
+    sendConnectionRequest(id);
+
+    if (document.getElementById("creatorProfileModal")) {
+        viewCreatorProfile(id);
+    }
+    break;
+
+case "close-creator-modal":
+    document.getElementById("creatorProfileModal")?.remove();
+    document.body.style.overflow = "";
+    break;
 
             case "join-project":
                 joinProject(id);
@@ -1345,6 +1746,7 @@ function renderProjects() {
 
             case "read-notification": {
                 const notifications = read(KEYS.notifications, []);
+
                 const item = notifications.find(n =>
                     n.id === id && n.userId === userId
                 );
@@ -1381,28 +1783,219 @@ function renderProjects() {
     });
 
     // ==========================================
-    // 23. CREATOR PROFILE VIEW
+    // 24. CREATOR PROFILE VIEW
     // ==========================================
 
-    function viewCreatorProfile(id) {
-        const profile = getProfile(id);
-        if (!profile) return;
-
-        const skills = (profile.skills || []).join(", ");
-
-        alert(
-            `CREATOR PROFILE\n\n` +
-            `Name: ${profile.name}\n` +
-            `Headline: ${profile.headline}\n` +
-            `Location: ${profile.location || "Not added"}\n\n` +
-            `About: ${profile.about || "No introduction"}\n\n` +
-            `Skills: ${skills || "Not added"}\n\n` +
-            `Availability: ${profile.availability}`
-        );
+   
+function viewCreatorProfile(id) {
+    const profile = getProfile(id);
+    if (!profile) {
+        showToast("Creator profile not found.");
+        return;
     }
 
+    // Remove an already-open profile modal.
+    document.getElementById("creatorProfileModal")?.remove();
+
+    const mySkills = getProfile(userId)?.skills || [];
+    const creatorSkills = profile.skills || [];
+
+    const matchScore = calculateSkillMatch(mySkills, creatorSkills);
+
+    const requests = read(KEYS.requests, []);
+
+    const connection = requests.find(request =>
+        request.type === "connection" &&
+        request.senderId === userId &&
+        request.receiverId === id &&
+        request.status !== "rejected"
+    );
+
+    const isConnected = connection?.status === "accepted";
+    const isPending = connection?.status === "pending";
+
+    let portfolioHTML = "";
+
+    if (profile.portfolio) {
+        try {
+            const url = new URL(profile.portfolio);
+
+            if (["https:", "http:"].includes(url.protocol)) {
+                portfolioHTML = `
+                    <a class="nexora-portfolio-link"
+                       href="${escapeHTML(url.href)}"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        <span>↗</span> Visit Portfolio
+                    </a>
+                `;
+            }
+        } catch {
+            portfolioHTML = "";
+        }
+    }
+
+    const ratings = read(KEYS.ratings, []).filter(
+        rating => rating.targetId === id
+    );
+
+    const averageRating = ratings.length
+        ? (
+            ratings.reduce((sum, rating) => sum + Number(rating.score), 0) /
+            ratings.length
+        ).toFixed(1)
+        : "New";
+
+    const modal = document.createElement("div");
+    modal.id = "creatorProfileModal";
+    modal.className = "nexora-profile-overlay";
+
+    modal.innerHTML = `
+        <div class="nexora-profile-modal">
+
+            <button class="nexora-modal-close"
+                data-action="close-creator-modal"
+                aria-label="Close profile">
+                ✕
+            </button>
+
+            <div class="nexora-profile-cover">
+                <div class="nexora-profile-cover-glow"></div>
+                <span class="nexora-profile-cover-label">
+                    NEXORA CREATOR PROFILE
+                </span>
+            </div>
+
+            <div class="nexora-profile-content">
+
+                <div class="nexora-profile-identity">
+
+                    <div class="nexora-profile-avatar">
+                        ${escapeHTML(initials(profile.name))}
+                    </div>
+
+                    <div class="nexora-profile-identity-info">
+                        <h2>${escapeHTML(profile.name)}</h2>
+                        <p>${escapeHTML(profile.headline || "Nexora Creator")}</p>
+                        <span class="nexora-profile-location">
+                            📍 ${escapeHTML(profile.location || "Location not added")}
+                        </span>
+                    </div>
+
+                    <span class="nexora-profile-availability ${
+                        (profile.availability || "").toLowerCase() === "available"
+                            ? "available"
+                            : ""
+                    }">
+                        ● ${escapeHTML(profile.availability || "Unknown")}
+                    </span>
+
+                </div>
+
+                <div class="nexora-profile-stats">
+
+                    <div class="nexora-profile-stat">
+                        <strong>${matchScore}%</strong>
+                        <span>Skill Match</span>
+                    </div>
+
+                    <div class="nexora-profile-stat">
+                        <strong>★ ${averageRating}</strong>
+                        <span>Rating</span>
+                    </div>
+
+                    <div class="nexora-profile-stat">
+                        <strong>${creatorSkills.length}</strong>
+                        <span>Skills</span>
+                    </div>
+
+                </div>
+
+                <div class="nexora-profile-section">
+                    <h3><span>✦</span> About Me</h3>
+                    <p>
+                        ${escapeHTML(
+                            profile.about ||
+                            "This creator hasn't added an introduction yet."
+                        )}
+                    </p>
+                </div>
+
+                <div class="nexora-profile-section">
+                    <h3><span>⚡</span> Skills & Expertise</h3>
+
+                    <div class="nexora-profile-skills">
+                        ${creatorSkills.length
+                            ? creatorSkills.map(skill => `
+                                <span>${escapeHTML(skill)}</span>
+                            `).join("")
+                            : `<p>No skills added yet.</p>`
+                        }
+                    </div>
+                </div>
+
+                <div class="nexora-profile-section">
+                    <h3><span>◈</span> Compatibility With You</h3>
+
+                    <div class="nexora-profile-match-heading">
+                        <span>Shared skill compatibility</span>
+                        <strong>${matchScore}%</strong>
+                    </div>
+
+                    <div class="nexora-profile-match-track">
+                        <div style="width:${matchScore}%"></div>
+                    </div>
+                </div>
+
+                ${portfolioHTML ? `
+                    <div class="nexora-profile-section">
+                        <h3><span>↗</span> Portfolio</h3>
+                        ${portfolioHTML}
+                    </div>
+                ` : ""}
+
+                <div class="nexora-profile-actions">
+
+                    <button
+                        class="nexora-profile-connect"
+                        data-action="connect"
+                        data-id="${escapeHTML(id)}"
+                        ${isConnected || isPending ? "disabled" : ""}
+                    >
+                        ${isConnected
+                            ? "✓ Connected"
+                            : isPending
+                                ? "Request Pending"
+                                : "＋ Connect with Creator"}
+                    </button>
+
+                    <button
+                        class="nexora-profile-close-btn"
+                        data-action="close-creator-modal">
+                        Close Profile
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = "hidden";
+
+    // Close when clicking outside the profile card.
+    modal.addEventListener("click", function(event) {
+        if (event.target === modal) {
+            modal.remove();
+            document.body.style.overflow = "";
+        }
+    });
+}
+
+
     // ==========================================
-    // 24. REPORT AND RATING FORM HELPERS
+    // 25. GLOBAL FUNCTIONS
     // ==========================================
 
     window.collabSpaceReport = submitReport;
@@ -1410,11 +2003,10 @@ function renderProjects() {
     window.collabSpaceMatches = getBestMatches;
 
     // ==========================================
-    // 25. PAGE INITIALISATION
+    // 26. PAGE INITIALISATION
     // ==========================================
 
     switch (page) {
-
         case "dashboard":
             renderDashboard();
             break;
@@ -1461,7 +2053,7 @@ function renderProjects() {
     }
 
     // ==========================================
-    // 26. CROSS-PAGE DATA REFRESH
+    // 27. CROSS-TAB DATA REFRESH
     // ==========================================
 
     window.addEventListener("storage", function (event) {
@@ -1480,6 +2072,6 @@ function renderProjects() {
         }
     });
 
-    console.log("CollabSpace 2.0 application loaded:", page);
+    console.log("Nexora application loaded:", page);
 
 });

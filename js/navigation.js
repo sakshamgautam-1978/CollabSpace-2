@@ -2,7 +2,7 @@
 document.addEventListener("DOMContentLoaded", function () {
 
     // =====================================
-    // 1. NAVIGATION CONFIGURATION
+    // 1. NEXORA NAVIGATION CONFIGURATION
     // =====================================
 
     const navigationGroups = [
@@ -35,21 +35,15 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     ];
 
-    // =====================================
-    // 2. FIND CURRENT PAGE
-    // =====================================
-
     const currentPage = document.body.dataset.page || "dashboard";
 
     const sidebar = document.getElementById("sidebar");
     const topbar = document.getElementById("topbar");
 
-    if (!sidebar || !topbar) {
-        return;
-    }
+    if (!sidebar || !topbar) return;
 
     // =====================================
-    // 3. GET USER INFORMATION
+    // 2. USER INFORMATION
     // =====================================
 
     function getCurrentUser() {
@@ -58,7 +52,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 name: "Guest User",
                 email: "guest@example.com"
             };
-        } catch (error) {
+        } catch {
             return {
                 name: "Guest User",
                 email: "guest@example.com"
@@ -67,6 +61,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const user = getCurrentUser();
+
+    function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, character => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[character]);
+    }
 
     function getInitials(name) {
         return String(name || "Guest User")
@@ -78,33 +82,32 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // =====================================
-    // 4. GENERATE SIDEBAR
+    // 3. GENERATE NEXORA SIDEBAR
     // =====================================
 
     let sidebarHTML = `
         <div class="sidebar-brand">
-            <div class="brand-icon">C</div>
-            <span class="brand-name">CollabSpace</span>
+            <div class="brand-icon">N</div>
+            <span class="brand-name">Nexora</span>
+
             <button
                 class="desktop-collapse"
                 id="desktopCollapse"
                 type="button"
                 title="Collapse Sidebar"
                 aria-label="Collapse sidebar"
-            >☰</button>
+            >←</button>
         </div>
 
         <nav class="sidebar-nav">
     `;
 
     navigationGroups.forEach(group => {
-
         sidebarHTML += `
             <div class="menu-heading">${group.heading}</div>
         `;
 
         group.links.forEach(link => {
-
             const activeClass =
                 currentPage === link.page ? "active" : "";
 
@@ -138,7 +141,7 @@ document.addEventListener("DOMContentLoaded", function () {
     sidebar.innerHTML = sidebarHTML;
 
     // =====================================
-    // 5. GENERATE TOPBAR
+    // 4. GENERATE TOPBAR
     // =====================================
 
     const pageTitles = {
@@ -158,6 +161,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     topbar.innerHTML = `
         <div class="topbar-left">
+
             <button
                 class="mobile-menu-button"
                 id="sidebarToggle"
@@ -165,10 +169,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 aria-label="Open navigation"
             >☰</button>
 
-            <h2>${pageTitles[currentPage] || "CollabSpace"}</h2>
+            <h2>${pageTitles[currentPage] || "Nexora"}</h2>
         </div>
 
         <div class="topbar-right">
+
             <a
                 href="notifications.html"
                 class="topbar-icon"
@@ -177,13 +182,16 @@ document.addEventListener("DOMContentLoaded", function () {
             >♢</a>
 
             <a href="profile.html" title="My Profile">
-                <div class="topbar-avatar">${getInitials(user.name)}</div>
+                <div class="topbar-avatar">
+                    ${getInitials(user.name)}
+                </div>
             </a>
+
         </div>
     `;
 
     // =====================================
-    // 6. SIDEBAR COLLAPSE ON DESKTOP
+    // 5. DESKTOP SIDEBAR COLLAPSE
     // =====================================
 
     const desktopCollapse =
@@ -194,10 +202,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (savedCollapsedState) {
         sidebar.classList.add("collapsed");
+        desktopCollapse.textContent = "☰";
+        desktopCollapse.title = "Expand Sidebar";
     }
 
-    
-    if (desktopCollapse) {
     desktopCollapse.addEventListener("click", function () {
 
         sidebar.classList.toggle("collapsed");
@@ -210,20 +218,15 @@ document.addEventListener("DOMContentLoaded", function () {
             isCollapsed
         );
 
-        desktopCollapse.textContent = isCollapsed ? "☰" : "←";
-        desktopCollapse.title = isCollapsed
-            ? "Expand Sidebar"
-            : "Collapse Sidebar";
+        desktopCollapse.textContent =
+            isCollapsed ? "☰" : "←";
+
+        desktopCollapse.title =
+            isCollapsed ? "Expand Sidebar" : "Collapse Sidebar";
     });
 
-    if (savedCollapsedState) {
-        desktopCollapse.textContent = "☰";
-        desktopCollapse.title = "Expand Sidebar";
-    }
-}
-
     // =====================================
-    // 7. MOBILE SIDEBAR
+    // 6. MOBILE SIDEBAR
     // =====================================
 
     const sidebarToggle =
@@ -234,33 +237,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function openMobileSidebar() {
         sidebar.classList.add("mobile-open");
-
-        if (overlay) {
-            overlay.classList.add("visible");
-        }
+        overlay?.classList.add("visible");
     }
 
     function closeMobileSidebar() {
         sidebar.classList.remove("mobile-open");
-
-        if (overlay) {
-            overlay.classList.remove("visible");
-        }
+        overlay?.classList.remove("visible");
     }
 
-    if (sidebarToggle) {
-        sidebarToggle.addEventListener(
-            "click",
-            openMobileSidebar
-        );
-    }
+    sidebarToggle?.addEventListener(
+        "click",
+        openMobileSidebar
+    );
 
-    if (overlay) {
-        overlay.addEventListener(
-            "click",
-            closeMobileSidebar
-        );
-    }
+    overlay?.addEventListener(
+        "click",
+        closeMobileSidebar
+    );
 
     sidebar.querySelectorAll(".nav-link").forEach(link => {
         link.addEventListener("click", closeMobileSidebar);
@@ -272,24 +265,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // =====================================
-    // 8. HTML ESCAPE HELPER
-    // =====================================
-
-    function escapeHTML(value) {
-        return String(value ?? "").replace(/[&<>"']/g, function (character) {
-            const entities = {
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                '"': "&quot;",
-                "'": "&#39;"
-            };
-
-            return entities[character];
-        });
-    }
-
-    console.log("CollabSpace navigation loaded:", currentPage);
+    console.log("Nexora navigation loaded:", currentPage);
 
 });
