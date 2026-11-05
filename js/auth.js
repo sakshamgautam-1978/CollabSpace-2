@@ -1,7 +1,7 @@
 
 /* =========================================
-   NEXORA - AUTHENTICATION SYSTEM
-   Login | Signup | Session Management
+   NEXORA AUTHENTICATION
+   Login | Signup | Session | Logout
 ========================================= */
 
 const AUTH_KEYS = {
@@ -9,7 +9,10 @@ const AUTH_KEYS = {
     currentUser: "collabCurrentUser"
 };
 
-// Read data from Local Storage
+// =========================================
+// STORAGE HELPERS
+// =========================================
+
 function getAuthData(key, fallback = []) {
     try {
         const data = localStorage.getItem(key);
@@ -20,65 +23,121 @@ function getAuthData(key, fallback = []) {
     }
 }
 
-// Save data to Local Storage
 function saveAuthData(key, data) {
     localStorage.setItem(key, JSON.stringify(data));
 }
 
-// Generate unique user ID
+function getCurrentAuthUser() {
+    return getAuthData(AUTH_KEYS.currentUser, null);
+}
+
 function generateUserId() {
     return "user_" + Date.now() + "_" +
         Math.random().toString(36).substring(2, 9);
 }
 
-// Display authentication messages
+// =========================================
+// MESSAGE HELPER
+// =========================================
+
 function showAuthMessage(elementId, message, type = "error") {
     const element = document.getElementById(elementId);
 
     if (!element) return;
 
     element.textContent = message;
-    element.style.color = type === "success" ? "#35d49a" : "#ff6b81";
-    element.style.display = "block";
+    element.style.color =
+        type === "success" ? "#35d49a" : "#ff6b81";
 }
 
-// Get current logged-in user
-function getCurrentAuthUser() {
-    return getAuthData(AUTH_KEYS.currentUser, null);
+// =========================================
+// LOGIN / SIGNUP SWITCHING
+// =========================================
+
+const loginForm = document.getElementById("loginForm");
+const signupForm = document.getElementById("signupForm");
+
+const showLogin = document.getElementById("showLogin");
+const showSignup = document.getElementById("showSignup");
+
+function switchAuthForm(type) {
+    if (!loginForm || !signupForm) return;
+
+    const isLogin = type === "login";
+
+    // Use hidden property directly
+    loginForm.hidden = !isLogin;
+    signupForm.hidden = isLogin;
+
+    showLogin?.classList.toggle("active", isLogin);
+    showSignup?.classList.toggle("active", !isLogin);
+
+    const loginMessage = document.getElementById("loginMessage");
+    const signupMessage = document.getElementById("signupMessage");
+
+    if (loginMessage) loginMessage.textContent = "";
+    if (signupMessage) signupMessage.textContent = "";
+}
+
+showLogin?.addEventListener("click", function () {
+    switchAuthForm("login");
+});
+
+showSignup?.addEventListener("click", function () {
+    switchAuthForm("signup");
+});
+
+// Ensure login is the initial visible form
+if (loginForm && signupForm) {
+    switchAuthForm("login");
 }
 
 // =========================================
 // SIGNUP
 // =========================================
 
-const signupForm = document.getElementById("signupForm");
-
 if (signupForm) {
     signupForm.addEventListener("submit", function (event) {
         event.preventDefault();
 
-        const name = document.getElementById("signupName")?.value.trim();
-        const email = document.getElementById("signupEmail")?.value.trim().toLowerCase();
-        const password = document.getElementById("signupPassword")?.value;
+        const name =
+            document.getElementById("signupName")?.value.trim();
+
+        const email =
+            document.getElementById("signupEmail")?.value.trim().toLowerCase();
+
+        const password =
+            document.getElementById("signupPassword")?.value;
 
         if (!name || !email || !password) {
-            showAuthMessage("signupMessage", "Please fill in all fields.");
+            showAuthMessage(
+                "signupMessage",
+                "Please fill in all fields."
+            );
             return;
         }
 
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            showAuthMessage("signupMessage", "Please enter a valid email address.");
+            showAuthMessage(
+                "signupMessage",
+                "Please enter a valid email address."
+            );
             return;
         }
 
         if (password.length < 6) {
-            showAuthMessage("signupMessage", "Password must contain at least 6 characters.");
+            showAuthMessage(
+                "signupMessage",
+                "Password must contain at least 6 characters."
+            );
             return;
         }
 
         const users = getAuthData(AUTH_KEYS.users, []);
 
-        const existingUser = users.find(user => user.email === email);
+        const existingUser = users.find(
+            user => user.email?.toLowerCase() === email
+        );
 
         if (existingUser) {
             showAuthMessage(
@@ -90,18 +149,19 @@ if (signupForm) {
 
         const newUser = {
             id: generateUserId(),
-            name: name,
-            email: email,
-            password: password,
+            name,
+            email,
+            password,
             createdAt: new Date().toISOString()
         };
 
         users.push(newUser);
+
         saveAuthData(AUTH_KEYS.users, users);
 
-        // Create the user's initial profile
+        // Create initial profile
         const profile = {
-            name: name,
+            name,
             headline: "Creative Professional",
             location: "",
             about: "Welcome to my Nexora profile!",
@@ -115,14 +175,12 @@ if (signupForm) {
             JSON.stringify(profile)
         );
 
-        // Automatically log in after signup
-        const sessionUser = {
+        // Create login session
+        saveAuthData(AUTH_KEYS.currentUser, {
             id: newUser.id,
             name: newUser.name,
             email: newUser.email
-        };
-
-        saveAuthData(AUTH_KEYS.currentUser, sessionUser);
+        });
 
         showAuthMessage(
             "signupMessage",
@@ -132,7 +190,7 @@ if (signupForm) {
 
         setTimeout(() => {
             window.location.href = "dashboard.html";
-        }, 800);
+        }, 700);
     });
 }
 
@@ -140,24 +198,30 @@ if (signupForm) {
 // LOGIN
 // =========================================
 
-const loginForm = document.getElementById("loginForm");
-
 if (loginForm) {
     loginForm.addEventListener("submit", function (event) {
         event.preventDefault();
 
-        const email = document.getElementById("loginEmail")?.value.trim().toLowerCase();
-        const password = document.getElementById("loginPassword")?.value;
+        const email =
+            document.getElementById("loginEmail")?.value.trim().toLowerCase();
+
+        const password =
+            document.getElementById("loginPassword")?.value;
 
         if (!email || !password) {
-            showAuthMessage("loginMessage", "Please enter your email and password.");
+            showAuthMessage(
+                "loginMessage",
+                "Please enter your email and password."
+            );
             return;
         }
 
         const users = getAuthData(AUTH_KEYS.users, []);
 
         const user = users.find(
-            item => item.email === email && item.password === password
+            item =>
+                item.email?.toLowerCase() === email &&
+                item.password === password
         );
 
         if (!user) {
@@ -168,13 +232,11 @@ if (loginForm) {
             return;
         }
 
-        const sessionUser = {
+        saveAuthData(AUTH_KEYS.currentUser, {
             id: user.id,
             name: user.name,
             email: user.email
-        };
-
-        saveAuthData(AUTH_KEYS.currentUser, sessionUser);
+        });
 
         showAuthMessage(
             "loginMessage",
@@ -189,72 +251,31 @@ if (loginForm) {
 }
 
 // =========================================
-// LOGIN / SIGNUP FORM SWITCHING
-// =========================================
-
-const showLogin = document.getElementById("showLogin");
-const showSignup = document.getElementById("showSignup");
-
-if (showLogin) {
-    showLogin.addEventListener("click", function (event) {
-        event.preventDefault();
-
-        document.getElementById("loginForm")?.classList.remove("hidden");
-        document.getElementById("signupForm")?.classList.add("hidden");
-
-        document.getElementById("loginMessage").textContent = "";
-        document.getElementById("signupMessage").textContent = "";
-    });
-}
-
-if (showSignup) {
-    showSignup.addEventListener("click", function (event) {
-        event.preventDefault();
-
-        document.getElementById("signupForm")?.classList.remove("hidden");
-        document.getElementById("loginForm")?.classList.add("hidden");
-
-        document.getElementById("loginMessage").textContent = "";
-        document.getElementById("signupMessage").textContent = "";
-    });
-}
-
-// =========================================
 // PAGE ACCESS PROTECTION
 // =========================================
 
 const currentPage = document.body.dataset.page;
-
-const publicPages = ["login", "signup", "index"];
-
 const currentSession = getCurrentAuthUser();
 
-if (currentPage && !publicPages.includes(currentPage)) {
-    if (!currentSession || !currentSession.id) {
-        window.location.href = "index.html";
-    }
+const isAuthPage = currentPage === "auth";
+
+// Protect internal pages
+if (!isAuthPage && (!currentSession || !currentSession.id)) {
+    window.location.replace("index.html");
 }
 
-// Redirect logged-in users away from login page
-if (
-    currentPage === "login" ||
-    currentPage === "signup" ||
-    currentPage === "index"
-) {
-    if (currentSession && currentSession.id) {
-        window.location.href = "dashboard.html";
-    }
-}
+// Do not redirect automatically from the login page.
+// Users can choose Login or Sign Up themselves.
 
 // =========================================
-// NEXORA LOGOUT
+// LOGOUT
 // =========================================
 
 function logoutNexora() {
     localStorage.removeItem(AUTH_KEYS.currentUser);
-    window.location.href = "index.html";
+    window.location.replace("index.html");
 }
 
 window.logoutNexora = logoutNexora;
 
-console.log("Nexora authentication system initialized.");
+console.log("Nexora authentication initialized successfully.");
