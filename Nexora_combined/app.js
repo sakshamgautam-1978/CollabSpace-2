@@ -1,6 +1,517 @@
+/* =========================================================
+   NEXORA APP.JS
+   Combined from the original auth.js, navigation.js and script.js.
+========================================================= */
 
+/* =========================================
+   NEXORA AUTHENTICATION
+========================================= */
+
+const AUTH_KEYS = {
+    users: "collabUsers",
+    currentUser: "collabCurrentUser"
+};
+
+function getAuthData(key, fallback = []) {
+    try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : fallback;
+    } catch (error) {
+        console.error("Nexora storage error:", error);
+        return fallback;
+    }
+}
+
+function saveAuthData(key, data) {
+    localStorage.setItem(key, JSON.stringify(data));
+}
+
+function getCurrentAuthUser() {
+    return getAuthData(AUTH_KEYS.currentUser, null);
+}
+
+function generateUserId() {
+    return "user_" + Date.now() + "_" +
+        Math.random().toString(36).substring(2, 9);
+}
+
+function showAuthMessage(elementId, message, type = "error") {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    element.textContent = message;
+    element.style.color =
+        type === "success" ? "#35d49a" : "#ff6b81";
+}
+
+const loginForm = document.getElementById("loginForm");
+const signupForm = document.getElementById("signupForm");
+const showLogin = document.getElementById("showLogin");
+const showSignup = document.getElementById("showSignup");
+
+function switchAuthForm(type) {
+    if (!loginForm || !signupForm) return;
+
+    const isLogin = type === "login";
+
+    loginForm.hidden = !isLogin;
+    signupForm.hidden = isLogin;
+
+    showLogin?.classList.toggle("active", isLogin);
+    showSignup?.classList.toggle("active", !isLogin);
+
+    const loginMessage = document.getElementById("loginMessage");
+    const signupMessage = document.getElementById("signupMessage");
+
+    if (loginMessage) loginMessage.textContent = "";
+    if (signupMessage) signupMessage.textContent = "";
+}
+
+showLogin?.addEventListener("click", function () {
+    switchAuthForm("login");
+});
+
+showSignup?.addEventListener("click", function () {
+    switchAuthForm("signup");
+});
+
+if (loginForm && signupForm) {
+    switchAuthForm("login");
+}
+
+/* =========================================
+   SIGNUP
+========================================= */
+
+if (signupForm) {
+    signupForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        const name =
+            document.getElementById("signupName")?.value.trim();
+
+        const email =
+            document.getElementById("signupEmail")?.value.trim().toLowerCase();
+
+        const password =
+            document.getElementById("signupPassword")?.value;
+
+        if (!name || !email || !password) {
+            showAuthMessage(
+                "signupMessage",
+                "Please fill in all fields."
+            );
+            return;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            showAuthMessage(
+                "signupMessage",
+                "Please enter a valid email address."
+            );
+            return;
+        }
+
+        if (password.length < 6) {
+            showAuthMessage(
+                "signupMessage",
+                "Password must contain at least 6 characters."
+            );
+            return;
+        }
+
+        const users = getAuthData(AUTH_KEYS.users, []);
+
+        const existingUser = users.find(
+            user => user.email?.toLowerCase() === email
+        );
+
+        if (existingUser) {
+            showAuthMessage(
+                "signupMessage",
+                "An account with this email already exists."
+            );
+            return;
+        }
+
+        const newUser = {
+            id: generateUserId(),
+            name,
+            email,
+            password,
+            createdAt: new Date().toISOString()
+        };
+
+        users.push(newUser);
+        saveAuthData(AUTH_KEYS.users, users);
+
+        const profile = {
+            name,
+            headline: "Creative Professional",
+            location: "",
+            about: "Welcome to my Nexora profile!",
+            skills: [],
+            portfolio: "",
+            availability: "Available"
+        };
+
+        localStorage.setItem(
+            "collabProfile_" + newUser.id,
+            JSON.stringify(profile)
+        );
+
+        saveAuthData(AUTH_KEYS.currentUser, {
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email
+        });
+
+        showAuthMessage(
+            "signupMessage",
+            "Welcome to Nexora! Your account has been created.",
+            "success"
+        );
+
+        setTimeout(() => {
+            window.location.hash = "#dashboard";
+            window.location.reload();
+        }, 700);
+    });
+}
+
+/* =========================================
+   LOGIN
+========================================= */
+
+if (loginForm) {
+    loginForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        const email =
+            document.getElementById("loginEmail")?.value.trim().toLowerCase();
+
+        const password =
+            document.getElementById("loginPassword")?.value;
+
+        if (!email || !password) {
+            showAuthMessage(
+                "loginMessage",
+                "Please enter your email and password."
+            );
+            return;
+        }
+
+        const users = getAuthData(AUTH_KEYS.users, []);
+
+        const user = users.find(
+            item =>
+                item.email?.toLowerCase() === email &&
+                item.password === password
+        );
+
+        if (!user) {
+            showAuthMessage(
+                "loginMessage",
+                "Invalid email or password. Please try again."
+            );
+            return;
+        }
+
+        saveAuthData(AUTH_KEYS.currentUser, {
+            id: user.id,
+            name: user.name,
+            email: user.email
+        });
+
+        showAuthMessage(
+            "loginMessage",
+            "Login successful! Welcome to Nexora.",
+            "success"
+        );
+
+        setTimeout(() => {
+            window.location.hash = "#dashboard";
+            window.location.reload();
+        }, 500);
+    });
+}
+
+/* =========================================
+   LOGOUT
+========================================= */
+
+function logoutNexora() {
+    localStorage.removeItem(AUTH_KEYS.currentUser);
+    window.location.hash = "#auth";
+    window.location.reload();
+}
+
+window.logoutNexora = logoutNexora;
+
+document.addEventListener("click", function (event) {
+    const logoutButton = event.target.closest("#logoutButton");
+
+    if (logoutButton) {
+        event.preventDefault();
+        logoutNexora();
+    }
+});
+
+/* =========================================
+   NEXORA NAVIGATION
+========================================= */
+
+function renderNexoraNavigation(page) {
+    const navigationGroups = [
+        {
+            heading: "WORKSPACE",
+            links: [
+                { name: "Dashboard", icon: "⌂", page: "dashboard" },
+                { name: "Discover Creators", icon: "◉", page: "creators" },
+                { name: "Explore Projects", icon: "▦", page: "projects" },
+                { name: "Post a Project", icon: "＋", page: "post-project" },
+                { name: "My Projects", icon: "▣", page: "my-projects" }
+            ]
+        },
+        {
+            heading: "COLLABORATION",
+            links: [
+                { name: "Collaborations", icon: "♧", page: "collaborations" },
+                { name: "Messages", icon: "✉", page: "messages" },
+                { name: "Notifications", icon: "♢", page: "notifications" }
+            ]
+        },
+        {
+            heading: "ACCOUNT",
+            links: [
+                { name: "My Profile", icon: "◎", page: "profile" },
+                { name: "Edit Profile", icon: "✎", page: "edit-profile" },
+                { name: "Settings", icon: "⚙", page: "settings" },
+                { name: "Moderation", icon: "⚑", page: "moderation" }
+            ]
+        }
+    ];
+
+    const sidebar = document.getElementById("sidebar");
+    const topbar = document.getElementById("topbar");
+
+    if (!sidebar || !topbar) return;
+
+    function getCurrentUser() {
+        try {
+            return JSON.parse(localStorage.getItem("collabCurrentUser")) || {
+                name: "Guest User",
+                email: "guest@example.com"
+            };
+        } catch {
+            return {
+                name: "Guest User",
+                email: "guest@example.com"
+            };
+        }
+    }
+
+    const user = getCurrentUser();
+
+    function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, character => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[character]);
+    }
+
+    function getInitials(name) {
+        return String(name || "Guest User")
+            .trim()
+            .split(/\s+/)
+            .slice(0, 2)
+            .map(part => part.charAt(0).toUpperCase())
+            .join("") || "GU";
+    }
+
+    let sidebarHTML = `
+        <div class="sidebar-brand">
+            <div class="brand-icon">N</div>
+            <span class="brand-name">Nexora</span>
+            <button
+                class="desktop-collapse"
+                id="desktopCollapse"
+                type="button"
+                title="Collapse Sidebar"
+                aria-label="Collapse sidebar"
+            >←</button>
+        </div>
+        <nav class="sidebar-nav">
+    `;
+
+    navigationGroups.forEach(group => {
+        sidebarHTML += `
+            <div class="menu-heading">${group.heading}</div>
+        `;
+
+        group.links.forEach(link => {
+            const activeClass = page === link.page ? "active" : "";
+
+            sidebarHTML += `
+                <a
+                    href="#${link.page}"
+                    class="nav-link ${activeClass}"
+                    title="${link.name}"
+                    ${page === link.page ? 'aria-current="page"' : ""}
+                >
+                    <span class="nav-icon">${link.icon}</span>
+                    <span class="nav-label">${link.name}</span>
+                </a>
+            `;
+        });
+    });
+
+    sidebarHTML += `
+        </nav>
+        <div class="sidebar-user">
+            <div class="user-avatar">${getInitials(user.name)}</div>
+            <div class="user-details">
+                <strong>${escapeHTML(user.name)}</strong>
+                <span>${escapeHTML(user.email)}</span>
+            </div>
+        </div>
+    `;
+
+    sidebar.innerHTML = sidebarHTML;
+
+    const pageTitles = {
+        dashboard: "Dashboard",
+        creators: "Discover Creators",
+        projects: "Explore Projects",
+        "post-project": "Post a Project",
+        "my-projects": "My Projects",
+        collaborations: "Collaborations",
+        messages: "Messages",
+        notifications: "Notifications",
+        profile: "My Profile",
+        "edit-profile": "Edit Profile",
+        settings: "Settings",
+        moderation: "Moderation Centre"
+    };
+
+    topbar.innerHTML = `
+        <div class="topbar-left">
+            <button
+                class="mobile-menu-button"
+                id="sidebarToggle"
+                type="button"
+                aria-label="Open navigation"
+            >☰</button>
+            <h2>${pageTitles[page] || "Nexora"}</h2>
+        </div>
+        <div class="topbar-right">
+            <a
+                href="#notifications"
+                class="topbar-icon"
+                title="Notifications"
+                aria-label="Notifications"
+            >♢</a>
+            <a href="#profile" title="My Profile">
+                <div class="topbar-avatar">
+                    ${getInitials(user.name)}
+                </div>
+            </a>
+        </div>
+    `;
+
+    const desktopCollapse =
+        document.getElementById("desktopCollapse");
+
+    const savedCollapsedState =
+        localStorage.getItem("collabSidebarCollapsed") === "true";
+
+    if (savedCollapsedState) {
+        sidebar.classList.add("collapsed");
+        if (desktopCollapse) {
+            desktopCollapse.textContent = "☰";
+            desktopCollapse.title = "Expand Sidebar";
+        }
+    }
+
+    desktopCollapse?.addEventListener("click", function () {
+        sidebar.classList.toggle("collapsed");
+
+        const isCollapsed =
+            sidebar.classList.contains("collapsed");
+
+        localStorage.setItem(
+            "collabSidebarCollapsed",
+            isCollapsed
+        );
+
+        desktopCollapse.textContent = isCollapsed ? "☰" : "←";
+        desktopCollapse.title =
+            isCollapsed ? "Expand Sidebar" : "Collapse Sidebar";
+    });
+
+    const sidebarToggle =
+        document.getElementById("sidebarToggle");
+
+    const overlay =
+        document.getElementById("sidebarOverlay");
+
+    function openMobileSidebar() {
+        sidebar.classList.add("mobile-open");
+        overlay?.classList.add("visible");
+    }
+
+    function closeMobileSidebar() {
+        sidebar.classList.remove("mobile-open");
+        overlay?.classList.remove("visible");
+    }
+
+    sidebarToggle?.addEventListener("click", openMobileSidebar);
+    overlay?.addEventListener("click", closeMobileSidebar);
+
+    sidebar.querySelectorAll(".nav-link").forEach(link => {
+        link.addEventListener("click", closeMobileSidebar);
+    });
+}
+
+/* =========================================
+   SINGLE-PAGE ROUTER
+========================================= */
+
+function getNexoraRoute() {
+    const route = window.location.hash.replace(/^#/, "").trim();
+    return route || (getCurrentAuthUser() ? "dashboard" : "auth");
+}
+
+function renderNexoraRoute() {
+    const route = getNexoraRoute();
+    const authView = document.getElementById("authView");
+    const appView = document.getElementById("appView");
+
+    if (route === "auth" || !getCurrentAuthUser()?.id) {
+        if (authView) authView.hidden = false;
+        if (appView) appView.hidden = true;
+        document.body.classList.add("auth-page");
+        return;
+    }
+
+    if (authView) authView.hidden = true;
+    if (appView) appView.hidden = false;
+
+    document.body.classList.remove("auth-page");
+
+    document.querySelectorAll(".spa-view").forEach(section => {
+        section.hidden = section.dataset.view !== route;
+    });
+
+    renderNexoraNavigation(route);
+    window.initializeNexoraPage?.(route);
+}
+
+window.addEventListener("hashchange", renderNexoraRoute);
 document.addEventListener("DOMContentLoaded", function () {
-
     // ==========================================
     // 1. STORAGE AND APPLICATION SETUP
     // ==========================================
@@ -35,7 +546,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!user) return;
 
     const userId = user.id;
-    const page = document.body.dataset.page;
+    let page = window.location.hash.slice(1) || "dashboard";
 
     // ==========================================
     // 2. COMMON HELPERS
@@ -433,8 +944,7 @@ document.addEventListener("DOMContentLoaded", function () {
             `).join("")
             : `<p class="empty-state">Your recent activity will appear here.</p>`;
     }
-
-    // ==========================================
+        // ==========================================
     // 7. CREATOR DISCOVERY
     // ==========================================
 
@@ -505,7 +1015,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             return `
                 <article class="creator-card nexora-creator-card">
-
                     <div class="creator-card-top">
                         <div class="creator-avatar nexora-creator-avatar">
                             ${escapeHTML(initials(creator.name))}
@@ -665,7 +1174,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             return `
                 <article class="project-card nexora-project-card">
-
                     <div class="project-card-top">
                         <span class="project-category-badge">
                             ${escapeHTML(project.category || "Other")}
@@ -757,8 +1265,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     document.getElementById("projectCategoryFilter")
         ?.addEventListener("change", renderProjects);
-
-    // ==========================================
+            // ==========================================
     // 9. POST PROJECT
     // ==========================================
 
@@ -766,17 +1273,26 @@ document.addEventListener("DOMContentLoaded", function () {
         ?.addEventListener("submit", function (event) {
             event.preventDefault();
 
-            const title = document.getElementById("projectTitle").value.trim();
-            const description = document.getElementById("projectDescription").value.trim();
-            const category = document.getElementById("projectCategory").value;
-            const teamSize = Number(document.getElementById("projectTeamSize").value);
+            const title =
+                document.getElementById("projectTitle").value.trim();
 
-            const skills = document.getElementById("projectSkills").value
-                .split(",")
-                .map(item => item.trim())
-                .filter(Boolean);
+            const description =
+                document.getElementById("projectDescription").value.trim();
 
-            const deadline = document.getElementById("projectDeadline").value;
+            const category =
+                document.getElementById("projectCategory").value;
+
+            const teamSize =
+                Number(document.getElementById("projectTeamSize").value);
+
+            const skills =
+                document.getElementById("projectSkills").value
+                    .split(",")
+                    .map(item => item.trim())
+                    .filter(Boolean);
+
+            const deadline =
+                document.getElementById("projectDeadline").value;
 
             if (!title || !description || !category || !skills.length) {
                 showToast("Please complete all required fields.");
@@ -809,7 +1325,7 @@ document.addEventListener("DOMContentLoaded", function () {
             showToast("Project published successfully!");
 
             setTimeout(() => {
-                window.location.href = "my-projects.html";
+                window.location.hash = "#my-projects";
             }, 700);
         });
 
@@ -825,6 +1341,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const requests = read(KEYS.requests, []);
 
         setText("myProjectCount", projects.length);
+
         setText(
             "openProjectCount",
             projects.filter(p => p.status === "open").length
@@ -913,6 +1430,10 @@ document.addEventListener("DOMContentLoaded", function () {
             request.status === "accepted"
         );
 
+        setText("incomingCount", incomingRequests.length);
+        setText("sentCount", sentRequests.length);
+        setText("activeCount", activeRequests.length);
+
         incoming.innerHTML = incomingRequests.length
             ? incomingRequests.map(request => {
                 const project = projects.find(p =>
@@ -990,7 +1511,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             </p>
                             <small>Accepted collaboration</small>
                         </div>
-                        <a href="messages.html" class="btn btn-secondary">
+                        <a href="#messages" class="btn btn-secondary">
                             Message
                         </a>
                     </div>
@@ -1064,6 +1585,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (!selectedConversation) {
             header.innerHTML = "<h2>Select a conversation</h2>";
+
             container.innerHTML = `
                 <p class="empty-state">
                     Choose a conversation to view messages.
@@ -1136,8 +1658,7 @@ document.addEventListener("DOMContentLoaded", function () {
             renderChat();
             showToast("Message sent!");
         });
-
-    // ==========================================
+            // ==========================================
     // 13. NOTIFICATIONS
     // ==========================================
 
@@ -1334,7 +1855,7 @@ document.addEventListener("DOMContentLoaded", function () {
             showToast("Profile updated successfully!");
 
             setTimeout(() => {
-                window.location.href = "profile.html";
+                window.location.hash = "#profile";
             }, 700);
         });
 
@@ -1710,19 +2231,18 @@ document.addEventListener("DOMContentLoaded", function () {
         const id = button.dataset.id;
 
         switch (action) {
-            
             case "connect":
-    sendConnectionRequest(id);
+                sendConnectionRequest(id);
 
-    if (document.getElementById("creatorProfileModal")) {
-        viewCreatorProfile(id);
-    }
-    break;
+                if (document.getElementById("creatorProfileModal")) {
+                    viewCreatorProfile(id);
+                }
+                break;
 
-case "close-creator-modal":
-    document.getElementById("creatorProfileModal")?.remove();
-    document.body.style.overflow = "";
-    break;
+            case "close-creator-modal":
+                document.getElementById("creatorProfileModal")?.remove();
+                document.body.style.overflow = "";
+                break;
 
             case "join-project":
                 joinProject(id);
@@ -1786,213 +2306,195 @@ case "close-creator-modal":
     // 24. CREATOR PROFILE VIEW
     // ==========================================
 
-   
-function viewCreatorProfile(id) {
-    const profile = getProfile(id);
-    if (!profile) {
-        showToast("Creator profile not found.");
-        return;
-    }
+    function viewCreatorProfile(id) {
+        const profile = getProfile(id);
 
-    // Remove an already-open profile modal.
-    document.getElementById("creatorProfileModal")?.remove();
-
-    const mySkills = getProfile(userId)?.skills || [];
-    const creatorSkills = profile.skills || [];
-
-    const matchScore = calculateSkillMatch(mySkills, creatorSkills);
-
-    const requests = read(KEYS.requests, []);
-
-    const connection = requests.find(request =>
-        request.type === "connection" &&
-        request.senderId === userId &&
-        request.receiverId === id &&
-        request.status !== "rejected"
-    );
-
-    const isConnected = connection?.status === "accepted";
-    const isPending = connection?.status === "pending";
-
-    let portfolioHTML = "";
-
-    if (profile.portfolio) {
-        try {
-            const url = new URL(profile.portfolio);
-
-            if (["https:", "http:"].includes(url.protocol)) {
-                portfolioHTML = `
-                    <a class="nexora-portfolio-link"
-                       href="${escapeHTML(url.href)}"
-                       target="_blank"
-                       rel="noopener noreferrer">
-                        <span>↗</span> Visit Portfolio
-                    </a>
-                `;
-            }
-        } catch {
-            portfolioHTML = "";
+        if (!profile) {
+            showToast("Creator profile not found.");
+            return;
         }
-    }
 
-    const ratings = read(KEYS.ratings, []).filter(
-        rating => rating.targetId === id
-    );
+        document.getElementById("creatorProfileModal")?.remove();
 
-    const averageRating = ratings.length
-        ? (
-            ratings.reduce((sum, rating) => sum + Number(rating.score), 0) /
-            ratings.length
-        ).toFixed(1)
-        : "New";
+        const mySkills = getProfile(userId)?.skills || [];
+        const creatorSkills = profile.skills || [];
 
-    const modal = document.createElement("div");
-    modal.id = "creatorProfileModal";
-    modal.className = "nexora-profile-overlay";
+        const matchScore = calculateSkillMatch(mySkills, creatorSkills);
+        const requests = read(KEYS.requests, []);
 
-    modal.innerHTML = `
-        <div class="nexora-profile-modal">
+        const connection = requests.find(request =>
+            request.type === "connection" &&
+            request.senderId === userId &&
+            request.receiverId === id &&
+            request.status !== "rejected"
+        );
 
-            <button class="nexora-modal-close"
-                data-action="close-creator-modal"
-                aria-label="Close profile">
-                ✕
-            </button>
+        const isConnected = connection?.status === "accepted";
+        const isPending = connection?.status === "pending";
 
-            <div class="nexora-profile-cover">
-                <div class="nexora-profile-cover-glow"></div>
-                <span class="nexora-profile-cover-label">
-                    NEXORA CREATOR PROFILE
-                </span>
-            </div>
+        let portfolioHTML = "";
 
-            <div class="nexora-profile-content">
+        if (profile.portfolio) {
+            try {
+                const url = new URL(profile.portfolio);
 
-                <div class="nexora-profile-identity">
+                if (["https:", "http:"].includes(url.protocol)) {
+                    portfolioHTML = `
+                        <a class="nexora-portfolio-link"
+                           href="${escapeHTML(url.href)}"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            <span>↗</span> Visit Portfolio
+                        </a>
+                    `;
+                }
+            } catch {
+                portfolioHTML = "";
+            }
+        }
 
-                    <div class="nexora-profile-avatar">
-                        ${escapeHTML(initials(profile.name))}
-                    </div>
+        const ratings = read(KEYS.ratings, []).filter(
+            rating => rating.targetId === id
+        );
 
-                    <div class="nexora-profile-identity-info">
-                        <h2>${escapeHTML(profile.name)}</h2>
-                        <p>${escapeHTML(profile.headline || "Nexora Creator")}</p>
-                        <span class="nexora-profile-location">
-                            📍 ${escapeHTML(profile.location || "Location not added")}
+        const averageRating = ratings.length
+            ? (
+                ratings.reduce((sum, rating) => sum + Number(rating.score), 0) /
+                ratings.length
+            ).toFixed(1)
+            : "New";
+
+        const modal = document.createElement("div");
+        modal.id = "creatorProfileModal";
+        modal.className = "nexora-profile-overlay";
+
+        modal.innerHTML = `
+            <div class="nexora-profile-modal">
+                <button class="nexora-modal-close"
+                    data-action="close-creator-modal"
+                    aria-label="Close profile">
+                    ✕
+                </button>
+
+                <div class="nexora-profile-cover">
+                    <div class="nexora-profile-cover-glow"></div>
+                    <span class="nexora-profile-cover-label">
+                        NEXORA CREATOR PROFILE
+                    </span>
+                </div>
+
+                <div class="nexora-profile-content">
+                    <div class="nexora-profile-identity">
+                        <div class="nexora-profile-avatar">
+                            ${escapeHTML(initials(profile.name))}
+                        </div>
+
+                        <div class="nexora-profile-identity-info">
+                            <h2>${escapeHTML(profile.name)}</h2>
+                            <p>${escapeHTML(profile.headline || "Nexora Creator")}</p>
+                            <span class="nexora-profile-location">
+                                📍 ${escapeHTML(profile.location || "Location not added")}
+                            </span>
+                        </div>
+
+                        <span class="nexora-profile-availability ${
+                            (profile.availability || "").toLowerCase() === "available"
+                                ? "available"
+                                : ""
+                        }">
+                            ● ${escapeHTML(profile.availability || "Unknown")}
                         </span>
                     </div>
 
-                    <span class="nexora-profile-availability ${
-                        (profile.availability || "").toLowerCase() === "available"
-                            ? "available"
-                            : ""
-                    }">
-                        ● ${escapeHTML(profile.availability || "Unknown")}
-                    </span>
+                    <div class="nexora-profile-stats">
+                        <div class="nexora-profile-stat">
+                            <strong>${matchScore}%</strong>
+                            <span>Skill Match</span>
+                        </div>
 
-                </div>
+                        <div class="nexora-profile-stat">
+                            <strong>★ ${averageRating}</strong>
+                            <span>Rating</span>
+                        </div>
 
-                <div class="nexora-profile-stats">
-
-                    <div class="nexora-profile-stat">
-                        <strong>${matchScore}%</strong>
-                        <span>Skill Match</span>
+                        <div class="nexora-profile-stat">
+                            <strong>${creatorSkills.length}</strong>
+                            <span>Skills</span>
+                        </div>
                     </div>
 
-                    <div class="nexora-profile-stat">
-                        <strong>★ ${averageRating}</strong>
-                        <span>Rating</span>
-                    </div>
-
-                    <div class="nexora-profile-stat">
-                        <strong>${creatorSkills.length}</strong>
-                        <span>Skills</span>
-                    </div>
-
-                </div>
-
-                <div class="nexora-profile-section">
-                    <h3><span>✦</span> About Me</h3>
-                    <p>
-                        ${escapeHTML(
+                    <div class="nexora-profile-section">
+                        <h3><span>✦</span> About Me</h3>
+                        <p>${escapeHTML(
                             profile.about ||
                             "This creator hasn't added an introduction yet."
-                        )}
-                    </p>
-                </div>
-
-                <div class="nexora-profile-section">
-                    <h3><span>⚡</span> Skills & Expertise</h3>
-
-                    <div class="nexora-profile-skills">
-                        ${creatorSkills.length
-                            ? creatorSkills.map(skill => `
-                                <span>${escapeHTML(skill)}</span>
-                            `).join("")
-                            : `<p>No skills added yet.</p>`
-                        }
-                    </div>
-                </div>
-
-                <div class="nexora-profile-section">
-                    <h3><span>◈</span> Compatibility With You</h3>
-
-                    <div class="nexora-profile-match-heading">
-                        <span>Shared skill compatibility</span>
-                        <strong>${matchScore}%</strong>
+                        )}</p>
                     </div>
 
-                    <div class="nexora-profile-match-track">
-                        <div style="width:${matchScore}%"></div>
-                    </div>
-                </div>
-
-                ${portfolioHTML ? `
                     <div class="nexora-profile-section">
-                        <h3><span>↗</span> Portfolio</h3>
-                        ${portfolioHTML}
+                        <h3><span>⚡</span> Skills & Expertise</h3>
+                        <div class="nexora-profile-skills">
+                            ${creatorSkills.length
+                                ? creatorSkills.map(skill => `
+                                    <span>${escapeHTML(skill)}</span>
+                                `).join("")
+                                : `<p>No skills added yet.</p>`
+                            }
+                        </div>
                     </div>
-                ` : ""}
 
-                <div class="nexora-profile-actions">
+                    <div class="nexora-profile-section">
+                        <h3><span>◈</span> Compatibility With You</h3>
+                        <div class="nexora-profile-match-heading">
+                            <span>Shared skill compatibility</span>
+                            <strong>${matchScore}%</strong>
+                        </div>
+                        <div class="nexora-profile-match-track">
+                            <div style="width:${matchScore}%"></div>
+                        </div>
+                    </div>
 
-                    <button
-                        class="nexora-profile-connect"
-                        data-action="connect"
-                        data-id="${escapeHTML(id)}"
-                        ${isConnected || isPending ? "disabled" : ""}
-                    >
-                        ${isConnected
-                            ? "✓ Connected"
-                            : isPending
-                                ? "Request Pending"
-                                : "＋ Connect with Creator"}
-                    </button>
+                    ${portfolioHTML ? `
+                        <div class="nexora-profile-section">
+                            <h3><span>↗</span> Portfolio</h3>
+                            ${portfolioHTML}
+                        </div>
+                    ` : ""}
 
-                    <button
-                        class="nexora-profile-close-btn"
-                        data-action="close-creator-modal">
-                        Close Profile
-                    </button>
+                    <div class="nexora-profile-actions">
+                        <button
+                            class="nexora-profile-connect"
+                            data-action="connect"
+                            data-id="${escapeHTML(id)}"
+                            ${isConnected || isPending ? "disabled" : ""}
+                        >
+                            ${isConnected
+                                ? "✓ Connected"
+                                : isPending
+                                    ? "Request Pending"
+                                    : "＋ Connect with Creator"}
+                        </button>
 
+                        <button
+                            class="nexora-profile-close-btn"
+                            data-action="close-creator-modal">
+                            Close Profile
+                        </button>
+                    </div>
                 </div>
-
             </div>
-        </div>
-    `;
+        `;
 
-    document.body.appendChild(modal);
-    document.body.style.overflow = "hidden";
+        document.body.appendChild(modal);
+        document.body.style.overflow = "hidden";
 
-    // Close when clicking outside the profile card.
-    modal.addEventListener("click", function(event) {
-        if (event.target === modal) {
-            modal.remove();
-            document.body.style.overflow = "";
-        }
-    });
-}
-
+        modal.addEventListener("click", function (event) {
+            if (event.target === modal) {
+                modal.remove();
+                document.body.style.overflow = "";
+            }
+        });
+    }
 
     // ==========================================
     // 25. GLOBAL FUNCTIONS
@@ -2003,54 +2505,56 @@ function viewCreatorProfile(id) {
     window.collabSpaceMatches = getBestMatches;
 
     // ==========================================
-    // 26. PAGE INITIALISATION
+    // 26. SPA PAGE INITIALISATION
     // ==========================================
 
-    switch (page) {
-        case "dashboard":
-            renderDashboard();
-            break;
+    window.initializeNexoraPage = function (route) {
+        switch (route) {
+            case "dashboard":
+                renderDashboard();
+                break;
 
-        case "creators":
-            renderCreators();
-            break;
+            case "creators":
+                renderCreators();
+                break;
 
-        case "projects":
-            renderProjects();
-            break;
+            case "projects":
+                renderProjects();
+                break;
 
-        case "my-projects":
-            renderMyProjects();
-            break;
+            case "my-projects":
+                renderMyProjects();
+                break;
 
-        case "collaborations":
-            renderCollaborations();
-            break;
+            case "collaborations":
+                renderCollaborations();
+                break;
 
-        case "messages":
-            renderMessages();
-            break;
+            case "messages":
+                renderMessages();
+                break;
 
-        case "notifications":
-            renderNotifications();
-            break;
+            case "notifications":
+                renderNotifications();
+                break;
 
-        case "profile":
-            renderProfile();
-            break;
+            case "profile":
+                renderProfile();
+                break;
 
-        case "edit-profile":
-            loadEditProfile();
-            break;
+            case "edit-profile":
+                loadEditProfile();
+                break;
 
-        case "settings":
-            loadSettings();
-            break;
+            case "settings":
+                loadSettings();
+                break;
 
-        case "moderation":
-            renderModeration();
-            break;
-    }
+            case "moderation":
+                renderModeration();
+                break;
+        }
+    };
 
     // ==========================================
     // 27. CROSS-TAB DATA REFRESH
@@ -2072,6 +2576,9 @@ function viewCreatorProfile(id) {
         }
     });
 
-    console.log("Nexora application loaded:", page);
+    console.log("Nexora application loaded.");
 
-});
+    // Initialise the current SPA route after all renderers exist.
+    renderNexoraRoute();
+
+}); // End DOMContentLoaded
